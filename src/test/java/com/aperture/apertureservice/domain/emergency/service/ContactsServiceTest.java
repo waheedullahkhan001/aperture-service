@@ -59,4 +59,24 @@ class ContactsServiceTest {
         service.remove(userId, c.id());
         assertThat(service.list(userId)).isEmpty();
     }
+
+    @Test
+    void updateToNewUniqueEmailAllowedAndDuplicateRejected() {
+        EmergencyContact mom = service.add(userId, "Mom", "mom@example.com", null);
+        service.add(userId, "Dad", "dad@example.com", null);
+
+        EmergencyContact updated = service.update(userId, mom.id(), "Mom", "mum@example.com", null);
+        assertThat(updated.email().value()).isEqualTo("mum@example.com");
+
+        assertThatThrownBy(() -> service.update(userId, mom.id(), "Mom", "dad@example.com", null))
+                .isInstanceOf(Conflict.class).hasFieldOrPropertyWithValue("code", "CONTACT_EXISTS");
+    }
+
+    @Test
+    void blankMessageOverrideStoredAsNull() {
+        EmergencyContact c = service.add(userId, "Mom", "mom@example.com", "   ");
+        assertThat(c.messageOverride()).isNull();
+        EmergencyContact updated = service.update(userId, c.id(), "Mom", "mom@example.com", "");
+        assertThat(updated.messageOverride()).isNull();
+    }
 }
