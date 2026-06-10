@@ -10,12 +10,18 @@ import com.aperture.apertureservice.domain.account.api.RequestPasswordReset;
 import com.aperture.apertureservice.domain.account.api.ResendVerification;
 import com.aperture.apertureservice.domain.account.api.ResetPassword;
 import com.aperture.apertureservice.domain.account.api.VerifyEmail;
+import com.aperture.apertureservice.infrastructure.security.AuthenticatedUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -107,5 +113,17 @@ class AuthControllerTest {
                         .content("""
                                 {"email":"u@example.com","code":"123456","newPassword":"abcdef1!"}"""))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void logoutDelegatesWithSessionIdFromPrincipal() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        var auth = new UsernamePasswordAuthenticationToken(
+                new AuthenticatedUser(userId, sessionId), null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        mvc.perform(post("/api/v1/auth/logout").principal(auth))
+                .andExpect(status().isNoContent());
+        verify(logOut).logOut(sessionId);
     }
 }
