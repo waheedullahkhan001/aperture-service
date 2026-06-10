@@ -40,12 +40,14 @@ class RecordingInsertRaceTest {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
 
         CountDownLatch start = new CountDownLatch(1);
-        // Build a fresh Recording instance per thread from the same values to avoid
-        // sharing a single entity that Hibernate might mutate on persist.
+        // Each thread mints its own distinct view_secret, mirroring production where every
+        // ensure() call generates a fresh random secret. INSERT ... ON CONFLICT (id) DO NOTHING
+        // only suppresses the id conflict; a shared secret would also trip the UNIQUE
+        // view_secret index, causing a spurious DuplicateKeyException on the losing thread.
         Callable<Boolean> attempt = () -> {
             start.await();
             Recording candidate = new Recording(recId, u.id(), RecordingStatus.PENDING, Instant.now(), null,
-                    "apv_race_" + recId, null, null);
+                    "apv_race_" + UUID.randomUUID(), null, null);  // distinct secret per thread, same id
             return recordings.insertIfAbsent(candidate);
         };
         try {
