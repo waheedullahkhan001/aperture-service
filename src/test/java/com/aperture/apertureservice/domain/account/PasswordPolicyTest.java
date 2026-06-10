@@ -14,8 +14,8 @@ class PasswordPolicyTest {
 
     @Test
     void rejectsShortOrMissingClasses() {
-        for (String bad : new String[]{"abcde1!", "abcdefg1", "abcdefg!", "abcdefgh"}) {
-            assertThatThrownBy(() -> PasswordPolicy.check(bad))
+        for (String bad : new String[]{null, "abcde1!", "abcdefg1", "abcdefg!", "abcdefgh"}) {
+            assertThatThrownBy(() -> PasswordPolicy.check(bad)).as("input: %s", bad)
                     .isInstanceOf(BadRequest.class)
                     .hasFieldOrPropertyWithValue("code", "PASSWORD_POLICY");
         }

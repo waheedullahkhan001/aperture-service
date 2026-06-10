@@ -9,6 +9,7 @@ public final class PasswordPolicy {
     public static void check(String raw) {
         boolean ok = raw != null
                 && raw.length() >= 8
+                // Unicode digits intentionally count as "a number" (SRS-004 doesn't restrict charset; don't "fix" to ASCII-only).
                 && raw.chars().anyMatch(Character::isDigit)
                 && raw.chars().anyMatch(c -> !Character.isLetterOrDigit(c));
         if (!ok) {

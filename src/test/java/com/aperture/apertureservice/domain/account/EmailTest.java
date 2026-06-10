@@ -15,8 +15,8 @@ class EmailTest {
 
     @Test
     void rejectsInvalidShapes() {
-        for (String bad : new String[]{"", "plain", "a@b", "a @b.com", "a@b .com", "@b.com", "a@.com"}) {
-            assertThatThrownBy(() -> new Email(bad))
+        for (String bad : new String[]{null, "", "plain", "a@b", "a @b.com", "a@b .com", "@b.com", "a@.com"}) {
+            assertThatThrownBy(() -> new Email(bad)).as("input: %s", bad)
                     .isInstanceOf(BadRequest.class)
                     .hasFieldOrPropertyWithValue("code", "EMAIL_INVALID");
         }
