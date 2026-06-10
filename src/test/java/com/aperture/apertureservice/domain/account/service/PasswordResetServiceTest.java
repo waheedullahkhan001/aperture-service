@@ -88,4 +88,24 @@ class PasswordResetServiceTest {
         assertThatThrownBy(() -> service.reset("u@example.com", "000000", "newpass1!"))
                 .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "CODE_INVALID");
     }
+
+    @Test
+    void requestHonorsCooldown() {
+        user(true);
+        service.request("u@example.com");
+        assertThatThrownBy(() -> service.request("u@example.com"))
+                .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "RESEND_COOLDOWN");
+    }
+
+    @Test
+    void resetLocksAfterFiveWrongAttempts() {
+        user(true);
+        service.request("u@example.com");
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> service.reset("u@example.com", "000000", "newpass1!"))
+                    .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "CODE_INVALID");
+        }
+        assertThatThrownBy(() -> service.reset("u@example.com", "654321", "newpass1!"))
+                .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "TOO_MANY_ATTEMPTS");
+    }
 }
