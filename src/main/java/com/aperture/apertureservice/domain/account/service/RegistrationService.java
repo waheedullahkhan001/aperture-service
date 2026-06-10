@@ -71,8 +71,9 @@ public class RegistrationService implements RegisterAccount, VerifyEmail, Resend
                 "Your verification code is %s. It expires in 10 minutes.");
     }
 
+    // attempt-counter increments inside checkCode must survive the BadRequest that follows them
     @Override
-    @Transactional
+    @Transactional(dontRollbackOn = BadRequest.class)
     public void verify(String rawEmail, String presented) {
         User user = users.byEmail(new Email(rawEmail))
                 .orElseThrow(() -> new BadRequest("CODE_INVALID", "Invalid code"));

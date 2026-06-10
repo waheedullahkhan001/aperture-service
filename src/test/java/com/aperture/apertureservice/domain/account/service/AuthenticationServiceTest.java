@@ -56,7 +56,7 @@ class AuthenticationServiceTest {
         assertThat(t.refreshToken()).startsWith("aprt_");
         assertThat(t.expiresInSeconds()).isEqualTo(900);
         Session s = sessions.byUser(u.id()).get(0);
-        assertThat(s.refreshTokenHash()).isEqualTo("#" + t.refreshToken());
+        assertThat(s.refreshTokenHash()).isEqualTo(tokens.hash(t.refreshToken()));
         assertThat(s.label()).isEqualTo("Firefox on Fedora");
         assertThat(s.expiresAt()).isEqualTo(T0.plus(REFRESH_TTL));
         assertThat(t.accessToken()).isEqualTo("jwt." + u.id() + "." + s.id());
@@ -83,18 +83,32 @@ class AuthenticationServiceTest {
     }
 
     @Test
-    void refreshRotatesTokenAndOldTokenTriggersReuseRevocation() {
+    void refreshRotatesAndImmediateRetryGetsNewTokenInsteadOfNuke() {
         User u = verifiedUser();
         AuthTokens first = service.logIn("u@example.com", "abcdef1!", "x");
         AuthTokens second = service.refresh(first.refreshToken());
         assertThat(second.refreshToken()).isNotEqualTo(first.refreshToken());
 
-        // presenting the rotated-away token again = reuse -> all sessions revoked
-        assertThatThrownBy(() -> service.refresh(first.refreshToken()))
+        // immediate retry with the rotated-away token: response-lost scenario -> fresh rotation, sessions intact
+        AuthTokens third = service.refresh(first.refreshToken());
+        assertThat(third.refreshToken()).isNotEqualTo(second.refreshToken());
+        assertThat(sessions.byUser(u.id())).hasSize(1);
+    }
+
+    @Test
+    void staleReuseOutsideGraceRevokesAllSessions() {
+        User u = verifiedUser();
+        AuthTokens first = service.logIn("u@example.com", "abcdef1!", "x");
+        AuthTokens second = service.refresh(first.refreshToken());
+
+        AuthenticationService later = new AuthenticationService(users, sessions, hasher,
+                new FakeTokenIssuer(), tokens, Clock.fixed(T0.plus(Duration.ofMinutes(5)), ZoneOffset.UTC),
+                ACCESS_TTL, REFRESH_TTL);
+        assertThatThrownBy(() -> later.refresh(first.refreshToken()))
                 .isInstanceOf(Unauthorized.class).hasFieldOrPropertyWithValue("code", "REFRESH_REUSED");
         assertThat(sessions.byUser(u.id())).isEmpty();
-        // and the rotated token is now dead too
-        assertThatThrownBy(() -> service.refresh(second.refreshToken()))
+        // the rotated token is also dead now that the nuke cleared everything
+        assertThatThrownBy(() -> later.refresh(second.refreshToken()))
                 .isInstanceOf(Unauthorized.class).hasFieldOrPropertyWithValue("code", "INVALID_REFRESH_TOKEN");
     }
 
@@ -113,6 +127,30 @@ class AuthenticationServiceTest {
                 ACCESS_TTL, REFRESH_TTL);
         assertThatThrownBy(() -> expiredView.refresh(t.refreshToken()))
                 .isInstanceOf(Unauthorized.class).hasFieldOrPropertyWithValue("code", "INVALID_REFRESH_TOKEN");
+    }
+
+    @Test
+    void refreshSlidesExpiryForward() {
+        User u = verifiedUser();
+        AuthTokens t = service.logIn("u@example.com", "abcdef1!", "x");
+        Instant later = T0.plus(Duration.ofDays(1));
+        AuthenticationService dayLater = new AuthenticationService(users, sessions, hasher,
+                new FakeTokenIssuer(), tokens, Clock.fixed(later, ZoneOffset.UTC), ACCESS_TTL, REFRESH_TTL);
+        dayLater.refresh(t.refreshToken());
+        assertThat(sessions.byUser(u.id()).get(0).expiresAt()).isEqualTo(later.plus(REFRESH_TTL));
+    }
+
+    @Test
+    void staleReuseOnExpiredSessionCleansUpWithoutNuking() {
+        User u = verifiedUser();
+        AuthTokens first = service.logIn("u@example.com", "abcdef1!", "x");
+        service.refresh(first.refreshToken());
+        AuthenticationService muchLater = new AuthenticationService(users, sessions, hasher,
+                new FakeTokenIssuer(), tokens, Clock.fixed(T0.plus(Duration.ofDays(31)), ZoneOffset.UTC),
+                ACCESS_TTL, REFRESH_TTL);
+        assertThatThrownBy(() -> muchLater.refresh(first.refreshToken()))
+                .isInstanceOf(Unauthorized.class).hasFieldOrPropertyWithValue("code", "INVALID_REFRESH_TOKEN");
+        assertThat(sessions.byUser(u.id())).isEmpty(); // zombie deleted, but not via the nuke path
     }
 
     @Test

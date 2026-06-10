@@ -27,6 +27,8 @@ import java.util.UUID;
 @DomainService
 public class AuthenticationService implements LogIn, RefreshSession, LogOut {
 
+    static final Duration REUSE_GRACE = Duration.ofSeconds(30);
+
     private final Users users;
     private final Sessions sessions;
     private final PasswordHasher hasher;
@@ -35,6 +37,7 @@ public class AuthenticationService implements LogIn, RefreshSession, LogOut {
     private final Clock clock;
     private final Duration accessTtl;
     private final Duration refreshTtl;
+    private final String timingDummyHash;
 
     public AuthenticationService(Users users, Sessions sessions, PasswordHasher hasher,
                                  TokenIssuer tokenIssuer, RandomTokens tokens, Clock clock,
@@ -47,14 +50,21 @@ public class AuthenticationService implements LogIn, RefreshSession, LogOut {
         this.clock = clock;
         this.accessTtl = accessTtl;
         this.refreshTtl = refreshTtl;
+        this.timingDummyHash = hasher.hash("aperture-timing-equalizer");
     }
 
     @Override
     @Transactional
     public AuthTokens logIn(String rawEmail, String rawPassword, String sessionLabel) {
-        User user = users.byEmail(new Email(rawEmail))
-                .filter(u -> hasher.matches(rawPassword, u.passwordHash().value()))
-                .orElseThrow(() -> new Unauthorized("INVALID_CREDENTIALS", "Invalid email or password"));
+        Optional<User> found = users.byEmail(new Email(rawEmail));
+        if (found.isEmpty()) {
+            hasher.matches(rawPassword, timingDummyHash); // constant-time-ish: pay the hash cost anyway
+            throw new Unauthorized("INVALID_CREDENTIALS", "Invalid email or password");
+        }
+        User user = found.get();
+        if (!hasher.matches(rawPassword, user.passwordHash().value())) {
+            throw new Unauthorized("INVALID_CREDENTIALS", "Invalid email or password");
+        }
         if (!user.verified()) {
             throw new Forbidden("EMAIL_NOT_VERIFIED", "Verify your email before logging in");
         }
@@ -68,18 +78,33 @@ public class AuthenticationService implements LogIn, RefreshSession, LogOut {
                 refresh, accessTtl.toSeconds());
     }
 
+    // session deletions on the reuse/expired paths must survive the Unauthorized that follows them
     @Override
-    @Transactional
+    @Transactional(dontRollbackOn = Unauthorized.class)
     public AuthTokens refresh(String presented) {
         Instant now = clock.instant();
         String h = tokens.hash(presented);
         Optional<Session> current = sessions.byRefreshTokenHash(h);
         if (current.isEmpty()) {
-            sessions.byPreviousTokenHash(h).ifPresent(reused -> {
+            Optional<Session> rotatedAway = sessions.byPreviousTokenHash(h);
+            if (rotatedAway.isEmpty()) {
+                throw new Unauthorized("INVALID_REFRESH_TOKEN", "Invalid refresh token");
+            }
+            Session reused = rotatedAway.get();
+            if (reused.expiresAt().isBefore(now)) {
+                // zombie session long past expiry: clean it up, don't treat as an attack
+                sessions.delete(reused.id());
+                throw new Unauthorized("INVALID_REFRESH_TOKEN", "Invalid refresh token");
+            }
+            if (reused.lastUsedAt().isAfter(now.minus(REUSE_GRACE))) {
+                // The rotation happened moments ago — almost certainly a client retry whose
+                // response was lost in transit, not an attack. Re-rotate instead of revoking
+                // everything (an emergency product must not nuke sessions on a network blip).
+                current = rotatedAway;
+            } else {
                 sessions.deleteAllForUser(reused.userId());
                 throw new Unauthorized("REFRESH_REUSED", "Refresh token reuse detected; all sessions revoked");
-            });
-            throw new Unauthorized("INVALID_REFRESH_TOKEN", "Invalid refresh token");
+            }
         }
         Session session = current.get();
         if (session.expiresAt().isBefore(now)) {
