@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: aperture-service
+  profiles:
+    default: dev
+app:
+  public-origin: "http://localhost"
+  recordings-path: "/data/recordings"
+  webhook-secret: "dev-webhook-secret-change-me"
+  jwt:
+    secret: "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
+    access-ttl: 15m
+  session:
+    refresh-ttl: 720h
+  streaming:
+    hls-base: "http://localhost:8888"
+    webrtc-base: "http://localhost:8889"
+  schedule:
+    dispatch-delay: 5s
+    retry-delay: 5m
+    sweep-delay: 60s

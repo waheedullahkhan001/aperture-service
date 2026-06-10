@@ -1,11 +1,9 @@
 package com.aperture.apertureservice;
 
+import com.aperture.apertureservice.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@IntegrationTest
 class ApertureServiceApplicationTests {
 
     @Test

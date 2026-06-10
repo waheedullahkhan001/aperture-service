@@ -1,0 +1,10 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+app:
+  recordings-path: "${java.io.tmpdir}/aperture-test-recordings"
+  schedule:
+    dispatch-delay: 1s
+    retry-delay: 10s
+    sweep-delay: 2s
