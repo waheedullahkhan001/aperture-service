@@ -63,4 +63,16 @@ class SecurityPrimitivesTest {
         assertThat(issuer.validate(token + "x")).isEmpty();
         assertThat(issuer.validate("garbage")).isEmpty();
     }
+
+    @Test
+    void jwtSignedWithDifferentKeyIsRejected() {
+        String secretA = Base64.getEncoder().encodeToString("d".repeat(64).getBytes(StandardCharsets.UTF_8));
+        String secretB = Base64.getEncoder().encodeToString("x".repeat(64).getBytes(StandardCharsets.UTF_8));
+        Instant now = Instant.parse("2026-06-07T12:00:00Z");
+        JwtTokenIssuer issuer = new JwtTokenIssuer(secretA, Clock.fixed(now, ZoneOffset.UTC));
+        JwtTokenIssuer forger = new JwtTokenIssuer(secretB, Clock.fixed(now, ZoneOffset.UTC));
+
+        String forged = forger.issue(UUID.randomUUID(), UUID.randomUUID(), Duration.ofMinutes(15));
+        assertThat(issuer.validate(forged)).isEmpty();
+    }
 }
