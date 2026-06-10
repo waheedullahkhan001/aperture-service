@@ -174,4 +174,19 @@ class MediaMtxContractTest {
                 .andExpect(status().isNoContent());
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.ENDED);
     }
+
+    @Test
+    void publishStartWithoutTokenIsRejected() throws Exception {
+        // the most plausible real misconfiguration: MediaMTX hook missing $MTX_QUERY
+        mvc.perform(post("/internal/streams/hooks/publish-start").header("Authorization", SECRET)
+                        .contentType("application/json")
+                        .content("""
+                                {"path":"aperture/%s","query":""}""".formatted(UuidCreator.getTimeOrderedEpoch())))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/internal/streams/hooks/publish-start").header("Authorization", SECRET)
+                        .contentType("application/json")
+                        .content("""
+                                {"path":"not-aperture/xyz","query":"token=apd_x"}"""))
+                .andExpect(status().isBadRequest());
+    }
 }
