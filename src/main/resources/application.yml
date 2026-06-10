@@ -8,7 +8,7 @@ app:
   recordings-path: "/data/recordings"
   webhook-secret: "dev-webhook-secret-change-me"
   jwt:
-    secret: "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQ="
+    secret: "ZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZA=="
     access-ttl: 15m
   session:
     refresh-ttl: 720h

@@ -20,6 +20,9 @@ app:
   webhook-secret: "${MEDIAMTX_WEBHOOK_SECRET}"
   jwt:
     secret: "${JWT_SECRET}"
+  streaming:
+    hls-base: "${MEDIAMTX_HLS_BASE}"
+    webrtc-base: "${MEDIAMTX_WEBRTC_BASE}"
 logging:
   level:
     com.aperture: INFO
