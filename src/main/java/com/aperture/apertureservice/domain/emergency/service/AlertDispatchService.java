@@ -62,6 +62,7 @@ public class AlertDispatchService implements DispatchAlerts, RetryFailedAlerts {
         }
         List<EmergencyContact> list = contacts.byUser(r.userId());
         if (list.isEmpty()) {
+            recordings.save(r.dispatched(clock.instant())); // zero recipients: pass complete, stop rescanning
             return;
         }
         String ownerName = users.byId(r.userId()).map(User::fullname).orElse("An Aperture user");
@@ -76,6 +77,7 @@ public class AlertDispatchService implements DispatchAlerts, RetryFailedAlerts {
         recordings.save(r.dispatched(clock.instant()));
     }
 
+    /** @return number of retry ATTEMPTS made this sweep (not successes). */
     @Override
     @Transactional
     public int retry() {
@@ -119,14 +121,23 @@ public class AlertDispatchService implements DispatchAlerts, RetryFailedAlerts {
 
     private boolean sendOnce(UUID recordingId, EmergencyContact contact, String ownerName, String body) {
         try {
-            emails.send(contact.email().value(), "Emergency alert from " + ownerName, body);
-            attempts.record(new AlertDispatchAttempt(null, recordingId, contact.id(),
-                    clock.instant(), true, null));
-            return true;
+            emails.send(contact.email().value(), "Emergency alert from " + sanitizeHeader(ownerName), body);
         } catch (Exception e) {
             attempts.record(new AlertDispatchAttempt(null, recordingId, contact.id(),
-                    clock.instant(), false, e.toString()));
+                    clock.instant(), false, truncate(e.toString())));
             return false;
         }
+        attempts.record(new AlertDispatchAttempt(null, recordingId, contact.id(),
+                clock.instant(), true, null));
+        return true;
+    }
+
+    /** Email subject header hardening: strip CR/LF (header injection) from user-controlled names. */
+    private static String sanitizeHeader(String value) {
+        return value.replaceAll("[\\r\\n]", " ");
+    }
+
+    private static String truncate(String message) {
+        return message.length() <= 1900 ? message : message.substring(0, 1900);
     }
 }

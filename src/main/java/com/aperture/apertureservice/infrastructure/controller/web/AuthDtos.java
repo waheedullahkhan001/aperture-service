@@ -1,13 +1,14 @@
 package com.aperture.apertureservice.infrastructure.controller.web;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public final class AuthDtos {
     private AuthDtos() {}
 
     public record RegisterRequest(@NotBlank @Size(max = 255) String email,
-                                  @NotBlank @Size(max = 255) String fullname,
+                                  @NotBlank @Size(max = 255) @Pattern(regexp = "[^\\r\\n]*", message = "must not contain line breaks") String fullname,
                                   @NotBlank @Size(max = 128) String password) {}
 
     public record VerifyEmailRequest(@NotBlank String email, @NotBlank String code) {}

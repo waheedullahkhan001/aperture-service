@@ -91,14 +91,17 @@ class AlertDispatchServiceTest {
     @Test
     void dispatchSkipsEndedOrUnknownOrContactlessRecordings() {
         service.dispatch(UUID.randomUUID());                       // unknown: no-op
-        service.dispatch(recId);                                   // no contacts: no-op
         assertThat(emails.all()).isEmpty();
-        assertThat(recordings.byId(recId).orElseThrow().alertsDispatchedAt()).isNull();
 
+        // ended recording: seed a fresh recording, add a contact, end it, then dispatch → no emails, dispatchedAt stays null
+        Recording fresh = new Recording(UuidCreator.getTimeOrderedEpoch(), userId, RecordingStatus.RECORDING,
+                T0, null, "apv_other", T0.minusSeconds(1), null);
+        recordings.save(fresh);
         contacts.save(new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
-        recordings.save(recordings.byId(recId).orElseThrow().ended(T0));
-        service.dispatch(recId);                                   // ended: no-op
+        recordings.save(fresh.ended(T0));
+        service.dispatch(fresh.id());                              // ended: no-op
         assertThat(emails.all()).isEmpty();
+        assertThat(recordings.byId(fresh.id()).orElseThrow().alertsDispatchedAt()).isNull();
     }
 
     @Test
@@ -131,6 +134,41 @@ class AlertDispatchServiceTest {
 
         // now 3 total attempts -> no further retries
         assertThat(service.retry()).isZero();
+    }
+
+    @Test
+    void allSendsFailingStillMarksDispatchedAndSweeperRecovers() {
+        contacts.save(new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
+        FlakyEmailSender alwaysDown = new FlakyEmailSender(2); // both inline attempts fail
+        AlertDispatchService downService = new AlertDispatchService(recordings, users, contacts,
+                configs, attempts, alwaysDown, clock, "http://localhost");
+
+        downService.dispatch(recId);
+        assertThat(recordings.byId(recId).orElseThrow().alertsDispatchedAt()).isEqualTo(T0); // pass completed
+        assertThat(attempts.all()).hasSize(2).noneMatch(AlertDispatchAttempt::success);
+
+        // sweeper (working sender) takes over and delivers the third, final attempt
+        assertThat(service.retry()).isEqualTo(1);
+        assertThat(emails.to("mom@example.com")).hasSize(1);
+        assertThat(service.retry()).isZero(); // 3 attempts total reached
+    }
+
+    @Test
+    void contactlessDispatchMarksPassCompleteWithoutEmails() {
+        service.dispatch(recId);
+        assertThat(emails.all()).isEmpty();
+        assertThat(recordings.byId(recId).orElseThrow().alertsDispatchedAt()).isEqualTo(T0);
+    }
+
+    @Test
+    void newlinesInOwnerNameAreStrippedFromSubject() {
+        users.save(new User(userId, new Email("owner@example.com"), "Alice\r\nBCC: evil@example.com",
+                new HashedPassword("h"), true, T0));
+        contacts.save(new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
+        service.dispatch(recId);
+        assertThat(emails.to("mom@example.com").get(0).subject())
+                .doesNotContain("\r").doesNotContain("\n")
+                .contains("Alice").contains("BCC: evil@example.com"); // flattened to one line, not a header
     }
 
     /** Fails the first N sends, then succeeds. */

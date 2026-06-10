@@ -3,6 +3,7 @@ package com.aperture.apertureservice.infrastructure.controller.web;
 import com.aperture.apertureservice.domain.account.Session;
 import com.aperture.apertureservice.domain.account.User;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
@@ -17,7 +18,7 @@ public final class AccountDtos {
         }
     }
 
-    public record UpdateProfileRequest(@NotBlank @Size(max = 255) String fullname) {}
+    public record UpdateProfileRequest(@NotBlank @Size(max = 255) @Pattern(regexp = "[^\\r\\n]*", message = "must not contain line breaks") String fullname) {}
 
     public record SessionResponse(UUID id, String label, Instant issuedAt, Instant lastUsedAt, Instant expiresAt) {
         public static SessionResponse from(Session s) {
