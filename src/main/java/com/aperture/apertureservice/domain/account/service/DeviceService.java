@@ -26,6 +26,8 @@ import java.util.UUID;
 @DomainService
 public class DeviceService implements ConnectDevice, ListDevices, RevokeDevice, IdentifyDevice {
 
+    static final int MAX_DEVICES = 25;
+
     private final Users users;
     private final Devices devices;
     private final RandomTokens tokens;
@@ -43,6 +45,10 @@ public class DeviceService implements ConnectDevice, ListDevices, RevokeDevice, 
     public MintedDevice connect(UUID userId, String name) {
         if (name == null || name.isBlank()) {
             throw new BadRequest("DEVICE_NAME_REQUIRED", "Device name is required");
+        }
+        users.byId(userId).orElseThrow(() -> new NotFound("USER_NOT_FOUND", "User not found"));
+        if (devices.byUser(userId).size() >= MAX_DEVICES) {
+            throw new BadRequest("DEVICE_LIMIT", "At most " + MAX_DEVICES + " devices allowed");
         }
         Instant now = clock.instant();
         String token = tokens.token("apd_");
@@ -63,6 +69,9 @@ public class DeviceService implements ConnectDevice, ListDevices, RevokeDevice, 
         Device d = devices.byId(deviceId)
                 .filter(x -> x.userId().equals(userId))
                 .orElseThrow(() -> new NotFound("DEVICE_NOT_FOUND", "Device not found"));
+        if (d.revoked()) {
+            return; // already revoked — keep the original forensic timestamp
+        }
         devices.save(d.revoke(clock.instant()));
     }
 
@@ -74,9 +83,10 @@ public class DeviceService implements ConnectDevice, ListDevices, RevokeDevice, 
         if (d.revoked()) {
             throw new Unauthorized("DEVICE_REVOKED", "Device has been revoked");
         }
-        devices.save(d.seen(clock.instant()));
+        // resolve owner before the lastSeen write so no path writes-then-throws
         User owner = users.byId(d.userId())
                 .orElseThrow(() -> new Unauthorized("INVALID_DEVICE_TOKEN", "Invalid device token"));
+        devices.save(d.seen(clock.instant()));
         return new DeviceIdentity(d.id(), d.userId(), d.name(), owner.fullname());
     }
 }

@@ -1,5 +1,6 @@
 package com.aperture.apertureservice.domain.account.service;
 
+import com.aperture.apertureservice.ddd.BadRequest;
 import com.aperture.apertureservice.ddd.NotFound;
 import com.aperture.apertureservice.ddd.Unauthorized;
 import com.aperture.apertureservice.domain.account.DeviceIdentity;
@@ -85,5 +86,36 @@ class DeviceServiceTest {
         MintedDevice minted = service.connect(u.id(), "Pixel 8");
         assertThatThrownBy(() -> service.revoke(UUID.randomUUID(), minted.id()))
                 .isInstanceOf(NotFound.class);
+    }
+
+    @Test
+    void listReturnsUsersDevices() {
+        User u = seed();
+        service.connect(u.id(), "Pixel 8");
+        service.connect(u.id(), "Tablet");
+        assertThat(service.list(u.id())).hasSize(2);
+        assertThat(service.list(UUID.randomUUID())).isEmpty();
+    }
+
+    @Test
+    void connectValidatesNameAndOwner() {
+        User u = seed();
+        assertThatThrownBy(() -> service.connect(u.id(), "  "))
+                .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "DEVICE_NAME_REQUIRED");
+        assertThatThrownBy(() -> service.connect(UUID.randomUUID(), "Pixel"))
+                .isInstanceOf(NotFound.class).hasFieldOrPropertyWithValue("code", "USER_NOT_FOUND");
+        assertThat(service.connect(u.id(), "  Pixel 8  ").name()).isEqualTo("Pixel 8"); // trimmed
+    }
+
+    @Test
+    void doubleRevokeKeepsOriginalTimestamp() {
+        User u = seed();
+        MintedDevice m = service.connect(u.id(), "Pixel 8");
+        service.revoke(u.id(), m.id());
+        Instant first = devices.byId(m.id()).orElseThrow().revokedAt();
+        DeviceService later = new DeviceService(users, devices, tokens,
+                Clock.fixed(T0.plusSeconds(120), ZoneOffset.UTC));
+        later.revoke(u.id(), m.id());
+        assertThat(devices.byId(m.id()).orElseThrow().revokedAt()).isEqualTo(first);
     }
 }
