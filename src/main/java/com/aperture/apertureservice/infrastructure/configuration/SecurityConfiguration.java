@@ -101,6 +101,7 @@ public class SecurityConfiguration {
                 .addFilterBefore(jwtFilter, AnonymousAuthenticationFilter.class)
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))
                 .authorizeHttpRequests(a -> a
+                        .requestMatchers("/api/v1/auth/logout").hasRole("USER")
                         .requestMatchers("/api/v1/auth/**", "/api/public/**",
                                 "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
                                 "/h2-console/**", "/error").permitAll()
