@@ -102,7 +102,7 @@ public class RegistrationService implements RegisterAccount, VerifyEmail, Resend
     /** Code rules: 5 attempts max, 10-minute TTL, attempt counter bumps on mismatch.
      *  PasswordResetService applies the same rules with its own inline copy (kept separate
      *  to avoid coupling the two services; the rules are locked by both test classes). */
-    void checkCode(VerificationCode code, String presented) {
+    private void checkCode(VerificationCode code, String presented) {
         Instant now = clock.instant();
         if (code.attempts() >= MAX_ATTEMPTS) {
             throw new BadRequest("TOO_MANY_ATTEMPTS", "Too many attempts; request a new code");
@@ -116,7 +116,7 @@ public class RegistrationService implements RegisterAccount, VerifyEmail, Resend
         }
     }
 
-    void issueCode(User user, VerificationCode.Purpose purpose, String subject, String bodyTemplate) {
+    private void issueCode(User user, VerificationCode.Purpose purpose, String subject, String bodyTemplate) {
         Instant now = clock.instant();
         String code = otp.sixDigits();
         codes.save(new VerificationCode(user.id(), purpose, tokens.hash(code),

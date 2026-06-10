@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+// Fidelity gap vs the real adapter: no unique-email enforcement here. The DB has a UNIQUE constraint on email; a same-email race that this stub would let through fails at the constraint in production (surfacing as a 500 — accepted for MVP since register pre-checks byEmail).
 @Stub
 public class InMemoryUsers implements Users {
     private final Map<UUID, User> byId = new ConcurrentHashMap<>();

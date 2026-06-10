@@ -141,4 +141,23 @@ class RegistrationServiceTest {
         assertThatThrownBy(() -> service.verify("ghost@example.com", "123456"))
                 .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "CODE_INVALID");
     }
+
+    @Test
+    void resendAfterLockoutIssuesUsableFreshCode() {
+        service.register("user@example.com", "A", "abcdef1!");
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> service.verify("user@example.com", "000000"))
+                    .isInstanceOf(BadRequest.class);
+        }
+        clock.advance(Duration.ofSeconds(61));
+        service.resend("user@example.com");
+        service.verify("user@example.com", "123456");   // fresh code works after lockout+resend
+        assertThat(users.byEmail(new Email("user@example.com")).orElseThrow().verified()).isTrue();
+    }
+
+    @Test
+    void registerRejectsBlankFullname() {
+        assertThatThrownBy(() -> service.register("a@b.com", "   ", "abcdef1!"))
+                .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "FULLNAME_REQUIRED");
+    }
 }
