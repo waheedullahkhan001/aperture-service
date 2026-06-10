@@ -7,6 +7,7 @@ import com.aperture.apertureservice.infrastructure.security.JwtAuthenticationFil
 import com.aperture.apertureservice.infrastructure.security.ProblemAuthEntryPoint;
 import com.aperture.apertureservice.infrastructure.security.WebhookSecretFilter;
 import tools.jackson.databind.ObjectMapper;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -40,6 +41,30 @@ public class SecurityConfiguration {
     @Bean
     DeviceTokenAuthenticationFilter deviceTokenAuthenticationFilter(IdentifyDevice identifyDevice) {
         return new DeviceTokenAuthenticationFilter(identifyDevice);
+    }
+
+    // The three filters below are security-chain members only. Boot auto-registers raw Filter
+    // beans into the global servlet chain as well — these disabled registrations prevent that
+    // (otherwise WebhookSecretFilter would 401 every non-actuator request on a real server).
+    @Bean
+    FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(JwtAuthenticationFilter f) {
+        FilterRegistrationBean<JwtAuthenticationFilter> reg = new FilterRegistrationBean<>(f);
+        reg.setEnabled(false);
+        return reg;
+    }
+
+    @Bean
+    FilterRegistrationBean<DeviceTokenAuthenticationFilter> deviceFilterRegistration(DeviceTokenAuthenticationFilter f) {
+        FilterRegistrationBean<DeviceTokenAuthenticationFilter> reg = new FilterRegistrationBean<>(f);
+        reg.setEnabled(false);
+        return reg;
+    }
+
+    @Bean
+    FilterRegistrationBean<WebhookSecretFilter> webhookFilterRegistration(WebhookSecretFilter f) {
+        FilterRegistrationBean<WebhookSecretFilter> reg = new FilterRegistrationBean<>(f);
+        reg.setEnabled(false);
+        return reg;
     }
 
     @Bean
