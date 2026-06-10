@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @Import({TestcontainersConfiguration.class, JpaEmergencyContacts.class})
@@ -54,6 +55,17 @@ class JpaEmergencyContactsTest {
 
         contacts.delete(saved.id());
         assertThat(contacts.byUser(userId)).isEmpty();
+    }
+
+    @Test
+    void duplicateUserEmailViolatesDbConstraint() {
+        UUID userId = seedUser();
+        contacts.save(new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
+        assertThatThrownBy(() -> {
+            contacts.save(new EmergencyContact(null, userId, "Mum", new Email("mom@example.com"), null));
+            em.flush();
+        }).isInstanceOfAny(org.springframework.dao.DataIntegrityViolationException.class,
+                jakarta.persistence.PersistenceException.class);
     }
 
     @Test
