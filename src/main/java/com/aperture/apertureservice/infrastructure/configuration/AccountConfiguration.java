@@ -11,7 +11,6 @@ import com.aperture.apertureservice.domain.account.spi.Sessions;
 import com.aperture.apertureservice.domain.account.spi.TokenIssuer;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.domain.account.spi.VerificationCodes;
-import com.aperture.apertureservice.domain.account.spi.stubs.NoopAccountCleanup;
 import com.aperture.apertureservice.domain.account.service.AuthenticationService;
 import com.aperture.apertureservice.domain.account.service.DeviceService;
 import com.aperture.apertureservice.domain.account.service.PasswordResetService;
@@ -63,12 +62,6 @@ public class AccountConfiguration {
     @Profile("!prod")
     EmailSender loggingEmailSender() {
         return new LoggingEmailSender();
-    }
-
-    // Temporary shim until JpaAccountCleanup lands (Task 21)
-    @Bean
-    AccountCleanup accountCleanup() {
-        return new NoopAccountCleanup();
     }
 
     @Bean

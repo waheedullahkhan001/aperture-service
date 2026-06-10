@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-interface DeviceJpaRepository extends JpaRepository<DeviceJpaEntity, UUID> {
+public interface DeviceJpaRepository extends JpaRepository<DeviceJpaEntity, UUID> {
     Optional<DeviceJpaEntity> findByTokenHash(String tokenHash);
     List<DeviceJpaEntity> findByUserId(UUID userId);
     void deleteByUserId(UUID userId);
