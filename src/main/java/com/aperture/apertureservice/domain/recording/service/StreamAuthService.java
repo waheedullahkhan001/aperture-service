@@ -42,6 +42,7 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
     @Override
     public void authorizePublish(String deviceToken, UUID recordingId) {
         DeviceIdentity identity = identifyDevice.identify(deviceToken); // throws Unauthorized incl. revoked
+        // absent row = the publish-start hook hasn't created it yet; allowed by design (parallel start)
         recordings.byId(recordingId).ifPresent(r -> {
             if (!r.userId().equals(identity.userId())) {
                 throw new Forbidden("RECORDING_FORBIDDEN", "Recording belongs to another user");
@@ -51,6 +52,19 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
 
     @Override
     public void authorizeView(UUID recordingId, String viewSecret) {
+        verifiedRow(recordingId, viewSecret);
+    }
+
+    @Override
+    public WatchView watch(UUID recordingId, String viewSecret) {
+        Recording r = verifiedRow(recordingId, viewSecret);
+        String ownerName = users.byId(r.userId()).map(User::fullname).orElse("Unknown");
+        return new WatchView(ownerName, r.startedAt(), r.status(), samples.latest(recordingId),
+                hlsBase + "/aperture/" + recordingId + "/index.m3u8?t=" + r.viewSecret(),
+                webrtcBase + "/aperture/" + recordingId + "/whep?t=" + r.viewSecret());
+    }
+
+    private Recording verifiedRow(UUID recordingId, String viewSecret) {
         Recording r = recordings.byId(recordingId)
                 .orElseThrow(() -> new NotFound("RECORDING_NOT_FOUND", "Recording not found"));
         byte[] expected = r.viewSecret().getBytes(StandardCharsets.UTF_8);
@@ -58,15 +72,6 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
         if (!MessageDigest.isEqual(expected, presented)) {
             throw new Forbidden("INVALID_VIEW_TOKEN", "Invalid view token");
         }
-    }
-
-    @Override
-    public WatchView watch(UUID recordingId, String viewSecret) {
-        authorizeView(recordingId, viewSecret);
-        Recording r = recordings.byId(recordingId).orElseThrow();
-        String ownerName = users.byId(r.userId()).map(User::fullname).orElse("Unknown");
-        return new WatchView(ownerName, r.startedAt(), r.status(), samples.latest(recordingId),
-                hlsBase + "/aperture/" + recordingId + "/index.m3u8?t=" + r.viewSecret(),
-                webrtcBase + "/aperture/" + recordingId + "/whep?t=" + r.viewSecret());
+        return r;
     }
 }
