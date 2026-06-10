@@ -27,6 +27,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
     implementation("com.github.f4b6a3:uuid-creator:5.3.7")
     compileOnly("org.projectlombok:lombok")
     runtimeOnly("com.h2database:h2")
