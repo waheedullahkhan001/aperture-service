@@ -19,6 +19,8 @@ public class RequestIdFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         String id = Optional.ofNullable(request.getHeader("X-Request-Id"))
+                .map(h -> h.replaceAll("[^A-Za-z0-9\\-_]", ""))
+                .map(h -> h.substring(0, Math.min(h.length(), 64)))
                 .filter(h -> !h.isBlank())
                 .orElse(UUID.randomUUID().toString());
         MDC.put("requestId", id);
