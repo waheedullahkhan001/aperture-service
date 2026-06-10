@@ -102,4 +102,13 @@ class ContactsControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
+
+    @Test
+    void alertConfigPutWithoutCountdownIsRejected() throws Exception {
+        mvc.perform(put("/api/v1/me/alert-config").principal(asUser()).contentType("application/json")
+                        .content("""
+                                {"messageTemplate":"Help! {{streamUrl}}"}"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+    }
 }

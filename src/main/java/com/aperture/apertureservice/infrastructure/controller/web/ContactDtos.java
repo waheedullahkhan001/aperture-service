@@ -5,6 +5,7 @@ import com.aperture.apertureservice.domain.emergency.EmergencyContact;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public final class ContactDtos {
@@ -20,7 +21,7 @@ public final class ContactDtos {
         }
     }
 
-    public record AlertConfigRequest(@Min(0) @Max(3600) int countdownDurationSeconds,
+    public record AlertConfigRequest(@NotNull @Min(0) @Max(3600) Integer countdownDurationSeconds,
                                      @NotBlank @Size(max = 4000) String messageTemplate) {}
 
     public record AlertConfigResponse(int countdownDurationSeconds, String messageTemplate) {
