@@ -17,13 +17,16 @@ import com.aperture.apertureservice.domain.account.service.PasswordResetService;
 import com.aperture.apertureservice.domain.account.service.ProfileService;
 import com.aperture.apertureservice.domain.account.service.RegistrationService;
 import com.aperture.apertureservice.infrastructure.email.LoggingEmailSender;
+import com.aperture.apertureservice.infrastructure.email.SmtpEmailSender;
 import com.aperture.apertureservice.infrastructure.security.BcryptPasswordHasher;
 import com.aperture.apertureservice.infrastructure.security.JwtTokenIssuer;
 import com.aperture.apertureservice.infrastructure.security.SecureOtpGenerator;
 import com.aperture.apertureservice.infrastructure.security.SecureRandomTokens;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.mail.javamail.JavaMailSender;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -62,6 +65,13 @@ public class AccountConfiguration {
     @Profile("!prod")
     EmailSender loggingEmailSender() {
         return new LoggingEmailSender();
+    }
+
+    @Bean
+    @Profile("prod")
+    EmailSender smtpEmailSender(JavaMailSender mailSender,
+                                @Value("${app.mail-from:aperture@localhost}") String from) {
+        return new SmtpEmailSender(mailSender, from);
     }
 
     @Bean
