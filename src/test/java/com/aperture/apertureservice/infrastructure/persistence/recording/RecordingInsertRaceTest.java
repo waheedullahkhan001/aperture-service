@@ -48,16 +48,17 @@ class RecordingInsertRaceTest {
                     "apv_race_" + recId, null, null);
             return recordings.insertIfAbsent(candidate);
         };
-        try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
-            Future<Boolean> a = pool.submit(attempt);
-            Future<Boolean> b = pool.submit(attempt);
-            start.countDown();
-            assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(true, false);
+        try {
+            try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
+                Future<Boolean> a = pool.submit(attempt);
+                Future<Boolean> b = pool.submit(attempt);
+                start.countDown();
+                assertThat(List.of(a.get(), b.get())).containsExactlyInAnyOrder(true, false);
+            }
+            assertThat(recordings.byId(recId)).isPresent();
+        } finally {
+            recordings.delete(recId);
+            users.delete(u.id());
         }
-        assertThat(recordings.byId(recId)).isPresent();
-
-        // cleanup (shared container across the suite)
-        recordings.delete(recId);
-        users.delete(u.id());
     }
 }

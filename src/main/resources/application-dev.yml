@@ -1,5 +1,6 @@
 spring:
   datasource:
+    # ensure() uses INSERT..ON CONFLICT (PostgreSQL syntax) — requires H2 2.x PG mode; if dev H2 misbehaves, run against a local Postgres instead
     url: "jdbc:h2:mem:aperture;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH"
     username: sa
     password: ""

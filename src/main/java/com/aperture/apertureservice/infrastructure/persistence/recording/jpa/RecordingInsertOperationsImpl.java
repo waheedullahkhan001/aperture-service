@@ -36,7 +36,7 @@ class RecordingInsertOperationsImpl implements RecordingInsertOperations {
                 VALUES
                     (:id, :userId, :status, :startedAt, :endedAt, :viewSecret,
                      :countdownEndsAt, :alertsDispatchedAt)
-                ON CONFLICT (id) DO NOTHING
+                ON CONFLICT (id) DO NOTHING -- conflict target is (id) only: a view_secret collision (256-bit random) is left to fail loudly on purpose
                 """)
                 .param("id", entity.id)
                 .param("userId", entity.userId)

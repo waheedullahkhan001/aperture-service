@@ -25,6 +25,7 @@ interface RecordingJpaRepository extends JpaRepository<RecordingJpaEntity, UUID>
     @Query("select r from RecordingJpaEntity r where r.id = :id")
     Optional<RecordingJpaEntity> findForUpdate(UUID id);
 
+    // status literals below must match RecordingStatus enum names — renaming the enum requires updating these queries
     @Query("""
             select r from RecordingJpaEntity r
             where r.countdownEndsAt is not null and r.countdownEndsAt <= :now

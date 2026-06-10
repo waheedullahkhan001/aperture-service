@@ -11,7 +11,10 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -32,6 +35,9 @@ class JpaRecordingsTest {
 
     @Autowired
     TestEntityManager em;
+
+    @Autowired
+    JdbcTemplate jdbc;
 
     private UUID seedUser() {
         UUID id = UuidCreator.getTimeOrderedEpoch();
@@ -101,5 +107,22 @@ class JpaRecordingsTest {
         assertThat(recordings.stalePending(before)).extracting(Recording::id).containsExactly(oldPending.id());
         assertThat(recordings.staleStreaming(before)).extracting(Recording::id)
                 .containsExactly(oldStreamingNoSegments.id());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void insertIfAbsentInsertsOnceThenReportsExisting() {
+        UUID userId = UUID.randomUUID();
+        jdbc.update("insert into users (id, email, fullname, password_hash, verified, created_at) values (?,?,?,?,?,now())",
+                userId, "race-slice-" + userId + "@example.com", "U", "h", false);
+        Recording r = recording(userId, RecordingStatus.PENDING, Instant.parse("2026-06-07T12:00:00Z"), null, null);
+        try {
+            assertThat(recordings.insertIfAbsent(r)).isTrue();
+            assertThat(recordings.insertIfAbsent(r)).isFalse();
+            assertThat(recordings.byId(r.id())).isPresent();
+        } finally {
+            recordings.delete(r.id());
+            jdbc.update("delete from users where id = ?", userId);
+        }
     }
 }
