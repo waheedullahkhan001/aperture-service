@@ -3,6 +3,10 @@ spring:
     name: aperture-service
   profiles:
     default: dev
+  task:
+    scheduling:
+      pool:
+        size: 2   # dispatch tick (slow SMTP) must not starve the stale-recording failsafe sweeper
 management:
   endpoints:
     web:

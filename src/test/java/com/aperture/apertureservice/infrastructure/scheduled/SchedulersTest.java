@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import org.springframework.transaction.support.TransactionCallback;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -36,6 +38,9 @@ class SchedulersTest {
             inv.<Consumer<TransactionStatus>>getArgument(0).accept(mock(TransactionStatus.class));
             return null;
         }).when(tx).executeWithoutResult(any());
+        doAnswer(inv -> inv.<TransactionCallback<Integer>>getArgument(0)
+                .doInTransaction(mock(TransactionStatus.class)))
+                .when(tx).execute(any());
     }
 
     @Test
@@ -54,10 +59,22 @@ class SchedulersTest {
     }
 
     @Test
-    void sweepersDelegate() {
+    void retrySweeperDelegatesAndSurvivesFailure() {
+        when(retryFailedAlerts.retry()).thenReturn(2);
         new AlertRetrySweeper(retryFailedAlerts, tx).tick();
         verify(retryFailedAlerts).retry();
+
+        doThrow(new RuntimeException("db down")).when(retryFailedAlerts).retry();
+        new AlertRetrySweeper(retryFailedAlerts, tx).tick(); // must not propagate
+    }
+
+    @Test
+    void stalledSweeperDelegatesAndSurvivesFailure() {
+        when(markStalled.sweep()).thenReturn(1);
         new StalledRecordingSweeper(markStalled, tx).tick();
         verify(markStalled).sweep();
+
+        doThrow(new RuntimeException("db down")).when(markStalled).sweep();
+        new StalledRecordingSweeper(markStalled, tx).tick(); // must not propagate
     }
 }

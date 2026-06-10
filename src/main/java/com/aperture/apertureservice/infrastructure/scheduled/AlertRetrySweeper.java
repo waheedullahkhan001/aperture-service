@@ -23,7 +23,10 @@ public class AlertRetrySweeper {
     @Scheduled(fixedDelayString = "${app.schedule.retry-delay}")
     public void tick() {
         try {
-            tx.executeWithoutResult(status -> retryFailedAlerts.retry());
+            Integer retried = tx.execute(status -> retryFailedAlerts.retry());
+            if (retried != null && retried > 0) {
+                log.info("Alert retry sweep re-attempted {} deliveries", retried);
+            }
         } catch (Exception e) {
             log.error("Alert retry sweep failed", e);
         }

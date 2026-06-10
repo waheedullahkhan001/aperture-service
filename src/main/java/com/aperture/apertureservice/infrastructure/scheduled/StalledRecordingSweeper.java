@@ -23,7 +23,10 @@ public class StalledRecordingSweeper {
     @Scheduled(fixedDelayString = "${app.schedule.sweep-delay}")
     public void tick() {
         try {
-            tx.executeWithoutResult(status -> markStalled.sweep());
+            Integer swept = tx.execute(status -> markStalled.sweep());
+            if (swept != null && swept > 0) {
+                log.info("Marked {} stalled recordings as failed", swept);
+            }
         } catch (Exception e) {
             log.error("Stalled recording sweep failed", e);
         }
