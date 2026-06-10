@@ -3,6 +3,11 @@ spring:
     name: aperture-service
   profiles:
     default: dev
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
 app:
   public-origin: "http://localhost"
   recordings-path: "/data/recordings"
