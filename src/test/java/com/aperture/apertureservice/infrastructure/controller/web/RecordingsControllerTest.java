@@ -33,6 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -96,6 +97,22 @@ class RecordingsControllerTest {
         mvc.perform(delete("/api/v1/recordings/" + recId).principal(asUser()))
                 .andExpect(status().isNoContent());
         verify(deleteRecording).delete(userId, recId);
+    }
+
+    @Test
+    void watchWithoutSampleReturnsNullLatestSample() throws Exception {
+        when(getWatchView.watch(recId, "apv_s")).thenReturn(new WatchView("Owner", t,
+                RecordingStatus.PENDING, Optional.empty(), "http://hls", "http://whep"));
+        mvc.perform(get("/api/public/watch/" + recId + "?t=apv_s"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.latestSample").value(nullValue()));
+    }
+
+    @Test
+    void invalidStatusParamYieldsProblemJson() throws Exception {
+        mvc.perform(get("/api/v1/recordings?status=BOGUS").principal(asUser()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_PARAMETER"));
     }
 
     @Test
