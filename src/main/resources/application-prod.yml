@@ -16,6 +16,7 @@ spring:
       mail.smtp.starttls.enable: true
 app:
   public-origin: "${APP_PUBLIC_ORIGIN}"
+  mail-from: "${APP_MAIL_FROM}"
   recordings-path: "${APP_RECORDINGS_PATH:/data/recordings}"
   webhook-secret: "${MEDIAMTX_WEBHOOK_SECRET}"
   jwt:

@@ -38,7 +38,7 @@ Swagger UI: http://localhost:8080/swagger-ui/index.html
 Prod environment variables: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`
 (base64, 64+ bytes), `MEDIAMTX_WEBHOOK_SECRET`, `MEDIAMTX_HLS_BASE`, `MEDIAMTX_WEBRTC_BASE`,
 `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `APP_PUBLIC_ORIGIN`,
-`APP_RECORDINGS_PATH`.
+`APP_RECORDINGS_PATH`, `APP_MAIL_FROM` (From address for alert emails).
 
 ## Authentication model
 
