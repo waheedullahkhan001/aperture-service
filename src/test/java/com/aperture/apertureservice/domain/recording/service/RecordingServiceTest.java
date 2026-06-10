@@ -112,6 +112,15 @@ class RecordingServiceTest {
     }
 
     @Test
+    void ensureOnTerminalRowReturnsItWithoutResurrection() {
+        service.ensure(recId, userId, null);
+        service.endAsSystem(recId);
+        EnsureResult again = service.ensure(recId, userId, null);
+        assertThat(again.created()).isFalse();
+        assertThat(again.recording().status()).isEqualTo(RecordingStatus.ENDED); // device sees terminal state
+    }
+
+    @Test
     void sweepFailsStalePendingAndStaleStreaming() {
         UUID pendingId = UuidCreator.getTimeOrderedEpoch();
         UUID streamingId = UuidCreator.getTimeOrderedEpoch();

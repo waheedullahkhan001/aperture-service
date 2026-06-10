@@ -64,6 +64,9 @@ public class RecordingService implements EnsureRecording, MarkStreaming, EndReco
     @Transactional
     public void markStreaming(UUID recordingId, UUID userId) {
         Recording r = owned(recordingId, userId);
+        // Known benign race: a concurrent end could commit between this read and the save,
+        // leaving a zombie RECORDING row. MediaMTX fires publish-start before publish-end per
+        // session, and the stale sweeper FAILs any zombie within minutes — accepted for MVP.
         if (r.status() == RecordingStatus.PENDING) {
             recordings.save(r.streaming());
         }
