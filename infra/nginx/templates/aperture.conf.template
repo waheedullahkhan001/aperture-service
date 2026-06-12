@@ -46,12 +46,14 @@ server {
         proxy_buffering off;
     }
 
-    # interim watch page (web session's real page replaces the static file later)
+    # watch page: any /watch/<uuid> serves the SPA watch page (reads id from the path)
     location ~ "^/watch/[0-9a-fA-F-]{36}$" {
         try_files /watch.html =404;
     }
 
+    # static web UI (multi-page): serve files by path, fall back to dirs
     location / {
         index index.html;
+        try_files $uri $uri/ =404;
     }
 }
