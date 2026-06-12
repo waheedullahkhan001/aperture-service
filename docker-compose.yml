@@ -37,8 +37,9 @@ services:
       # mount path below and mediamtx's recordPath root.
     ports:
       # host 8080 is squatted by an unrelated auto-starting container — never bind it.
-      # 8081 also matches the web session's dev expectation.
-      - "8081:8080"
+      # 8081 also matches the web session's dev expectation. Loopback-only:
+      # public API traffic goes through nginx.
+      - "127.0.0.1:8081:8080"
     volumes:
       - recordings:/data/recordings
     depends_on:
@@ -56,9 +57,9 @@ services:
     environment:
       MEDIAMTX_WEBHOOK_SECRET: ${MEDIAMTX_WEBHOOK_SECRET}
     ports:
-      - "8554:8554"   # RTSP publish (the phone)
-      - "8888:8888"   # HLS
-      - "8889:8889"   # WebRTC/WHEP
+      - "8554:8554"             # RTSP publish (the phone) — the only public streaming port
+      - "127.0.0.1:8888:8888"   # HLS — public access goes through nginx
+      - "127.0.0.1:8889:8889"   # WebRTC/WHEP — same
     volumes:
       - recordings:/data/recordings
     depends_on:
@@ -79,8 +80,45 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"
     ports:
-      - "8025:8025"   # web UI + API; SMTP (1025) stays compose-internal
+      - "127.0.0.1:8025:8025"   # web UI + API (loopback); SMTP (1025) stays compose-internal
+
+  nginx:
+    image: nginx:1.27-alpine
+    environment:
+      DOMAIN: ${DOMAIN}
+      # envsubst would otherwise eat nginx runtime vars like $host in templates
+      NGINX_ENVSUBST_FILTER: DOMAIN
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/templates:/etc/nginx/templates:ro
+      - ./infra/nginx/static:/usr/share/nginx/html:ro
+      - ./infra/nginx/no-default.conf:/etc/nginx/conf.d/default.conf:ro
+      - certbot_webroot:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/healthz"]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 5
+
+  # run-once tool, not a long-running service:
+  #   docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
+  #     -d $DOMAIN --email $CERTBOT_EMAIL --agree-tos --no-eff-email
+  certbot:
+    image: certbot/certbot
+    profiles: ["tools"]
+    volumes:
+      - certbot_webroot:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
 
 volumes:
   pgdata:
   recordings:
+  certbot_webroot:
+  letsencrypt:
