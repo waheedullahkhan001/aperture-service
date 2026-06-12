@@ -78,7 +78,8 @@ in a later iteration once a compatible release is available.
 
 ## Roadmap
 
-- Phase 2: docker-compose deployment (PostgreSQL, MediaMTX, Nginx, watch page).
+- Phase 2: docker-compose deployment — core stack done (see "Running the whole stack
+  locally" below); Nginx proxy + watch page land next, then VPS deployment.
 - Phase 3: web management UI.
 
 ## Running the whole stack locally
