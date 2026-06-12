@@ -10,6 +10,12 @@ server {
         root /var/www/certbot;
     }
 
+    # container healthcheck probes plain http; everything else redirects
+    location = /healthz {
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
     location / {
         return 301 https://$host$request_uri;
     }
