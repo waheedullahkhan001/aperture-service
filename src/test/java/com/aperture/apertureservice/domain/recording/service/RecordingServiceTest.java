@@ -3,6 +3,7 @@ package com.aperture.apertureservice.domain.recording.service;
 import com.aperture.apertureservice.ddd.Forbidden;
 import com.aperture.apertureservice.ddd.NotFound;
 import com.aperture.apertureservice.domain.account.spi.stubs.FixedRandomTokens;
+import com.aperture.apertureservice.domain.recording.CancelResult;
 import com.aperture.apertureservice.domain.recording.EnsureResult;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.RecordingStatus;
@@ -118,6 +119,37 @@ class RecordingServiceTest {
         EnsureResult again = service.ensure(recId, userId, null);
         assertThat(again.created()).isFalse();
         assertThat(again.recording().status()).isEqualTo(RecordingStatus.ENDED); // device sees terminal state
+    }
+
+    @Test
+    void cancelAlertsDisarmsCountdownAndIsIdempotent() {
+        service.ensure(recId, userId, null);                       // FixedAlertPolicy arms 30s countdown
+        assertThat(recordings.dispatchDue(T0.plusSeconds(31))).hasSize(1);
+
+        CancelResult first = service.cancelAlerts(recId, userId);
+        assertThat(first.cancelled()).isTrue();
+        assertThat(first.alertsAlreadyDispatched()).isFalse();
+        assertThat(recordings.byId(recId).orElseThrow().countdownEndsAt()).isNull();
+        assertThat(recordings.dispatchDue(T0.plusSeconds(31))).isEmpty();
+
+        CancelResult again = service.cancelAlerts(recId, userId);  // idempotent
+        assertThat(again.cancelled()).isTrue();
+    }
+
+    @Test
+    void cancelAlertsAfterDispatchReportsIrreversible() {
+        service.ensure(recId, userId, null);
+        recordings.save(recordings.byId(recId).orElseThrow().dispatched(T0));
+        CancelResult result = service.cancelAlerts(recId, userId);
+        assertThat(result.cancelled()).isFalse();
+        assertThat(result.alertsAlreadyDispatched()).isTrue();
+    }
+
+    @Test
+    void cancelAlertsChecksOwnership() {
+        service.ensure(recId, userId, null);
+        assertThatThrownBy(() -> service.cancelAlerts(recId, UUID.randomUUID())).isInstanceOf(Forbidden.class);
+        assertThatThrownBy(() -> service.cancelAlerts(UUID.randomUUID(), userId)).isInstanceOf(NotFound.class);
     }
 
     @Test

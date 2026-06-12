@@ -30,4 +30,9 @@ public record Recording(UUID id, UUID userId, RecordingStatus status, Instant st
         return new Recording(id, userId, status, startedAt, endedAt,
                 viewSecret, countdownEndsAt, at);
     }
+
+    /** Disarms the alert countdown; recording continues, alerts will never fire. */
+    public Recording disarmed() {
+        return new Recording(id, userId, status, startedAt, endedAt, viewSecret, null, alertsDispatchedAt);
+    }
 }

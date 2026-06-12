@@ -161,6 +161,16 @@ class AlertDispatchServiceTest {
     }
 
     @Test
+    void dispatchSkipsRecordingWhoseCountdownWasCancelled() {
+        contacts.save(new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
+        // simulate cancel landing between the scheduler's due-list load and the dispatch lock
+        recordings.save(recordings.byId(recId).orElseThrow().disarmed());
+        service.dispatch(recId);
+        assertThat(emails.all()).isEmpty();
+        assertThat(recordings.byId(recId).orElseThrow().alertsDispatchedAt()).isNull();
+    }
+
+    @Test
     void newlinesInOwnerNameAreStrippedFromSubject() {
         users.save(new User(userId, new Email("owner@example.com"), "Alice\r\nBCC: evil@example.com",
                 new HashedPassword("h"), true, T0));

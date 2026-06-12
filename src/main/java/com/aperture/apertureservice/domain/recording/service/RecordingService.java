@@ -4,9 +4,11 @@ import com.aperture.apertureservice.ddd.DomainService;
 import com.aperture.apertureservice.ddd.Forbidden;
 import com.aperture.apertureservice.ddd.NotFound;
 import com.aperture.apertureservice.ddd.RandomTokens;
+import com.aperture.apertureservice.domain.recording.CancelResult;
 import com.aperture.apertureservice.domain.recording.EnsureResult;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.RecordingStatus;
+import com.aperture.apertureservice.domain.recording.api.CancelAlerts;
 import com.aperture.apertureservice.domain.recording.api.EndRecording;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
 import com.aperture.apertureservice.domain.recording.api.MarkStalledRecordings;
@@ -21,7 +23,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @DomainService
-public class RecordingService implements EnsureRecording, MarkStreaming, EndRecording, MarkStalledRecordings {
+public class RecordingService implements EnsureRecording, MarkStreaming, EndRecording, MarkStalledRecordings, CancelAlerts {
 
     static final Duration STALE_AFTER = Duration.ofMinutes(5);
 
@@ -105,6 +107,25 @@ public class RecordingService implements EnsureRecording, MarkStreaming, EndReco
             count++;
         }
         return count;
+    }
+
+    @Override
+    @Transactional
+    public CancelResult cancelAlerts(UUID recordingId, UUID userId) {
+        // row lock serializes against the dispatcher: after we commit a disarm, its
+        // under-lock guard (countdownEndsAt == null) makes a stale due-list entry a no-op
+        Recording r = recordings.byIdForUpdate(recordingId)
+                .orElseThrow(() -> new NotFound("RECORDING_NOT_FOUND", "Recording not found"));
+        if (!r.userId().equals(userId)) {
+            throw new Forbidden("RECORDING_FORBIDDEN", "Recording belongs to another user");
+        }
+        if (r.alertsDispatchedAt() != null) {
+            return new CancelResult(false, true);   // UC-08 1b: already sent, cannot be retracted
+        }
+        if (r.countdownEndsAt() != null) {
+            recordings.save(r.disarmed());
+        }
+        return new CancelResult(true, false);
     }
 
     private Recording owned(UUID recordingId, UUID userId) {

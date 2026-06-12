@@ -2,10 +2,12 @@ package com.aperture.apertureservice.infrastructure.controller.device;
 
 import com.aperture.apertureservice.domain.emergency.api.GetAlertConfiguration;
 import com.aperture.apertureservice.domain.emergency.api.ListEmergencyContacts;
+import com.aperture.apertureservice.domain.recording.CancelResult;
 import com.aperture.apertureservice.domain.recording.EnsureResult;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.WatchUrls;
 import com.aperture.apertureservice.domain.recording.api.AppendMetadataSamples;
+import com.aperture.apertureservice.domain.recording.api.CancelAlerts;
 import com.aperture.apertureservice.domain.recording.api.EndRecording;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
@@ -34,16 +36,19 @@ public class DeviceApiController {
     private final AppendMetadataSamples appendSamples;
     private final GetAlertConfiguration getAlertConfig;
     private final ListEmergencyContacts listContacts;
+    private final CancelAlerts cancelAlertsPort;
     private final AppProperties props;
 
     public DeviceApiController(EnsureRecording ensureRecording, EndRecording endRecording,
                                AppendMetadataSamples appendSamples, GetAlertConfiguration getAlertConfig,
-                               ListEmergencyContacts listContacts, AppProperties props) {
+                               ListEmergencyContacts listContacts, CancelAlerts cancelAlertsPort,
+                               AppProperties props) {
         this.ensureRecording = ensureRecording;
         this.endRecording = endRecording;
         this.appendSamples = appendSamples;
         this.getAlertConfig = getAlertConfig;
         this.listContacts = listContacts;
+        this.cancelAlertsPort = cancelAlertsPort;
         this.props = props;
     }
 
@@ -84,6 +89,12 @@ public class DeviceApiController {
                         s.clientTimestamp(), s.deviceInfo()))
                 .toList());
         return new DeviceApiDtos.AcceptedResponse(accepted);
+    }
+
+    @PostMapping("/recordings/{id}/cancel-alerts")
+    public DeviceApiDtos.CancelAlertsResponse cancelAlerts(Authentication auth, @PathVariable UUID id) {
+        CancelResult result = cancelAlertsPort.cancelAlerts(id, device(auth).userId());
+        return new DeviceApiDtos.CancelAlertsResponse(result.cancelled(), result.alertsAlreadyDispatched());
     }
 
     @GetMapping("/alert-config")

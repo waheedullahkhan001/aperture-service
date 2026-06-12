@@ -57,8 +57,8 @@ public class AlertDispatchService implements DispatchAlerts, RetryFailedAlerts {
     @Transactional
     public void dispatch(UUID recordingId) {
         Recording r = recordings.byIdForUpdate(recordingId).orElse(null);
-        if (r == null || !r.live() || r.alertsDispatchedAt() != null) {
-            return;
+        if (r == null || !r.live() || r.alertsDispatchedAt() != null || r.countdownEndsAt() == null) {
+            return; // countdownEndsAt == null: cancelled between due-list load and this lock
         }
         List<EmergencyContact> list = contacts.byUser(r.userId());
         if (list.isEmpty()) {

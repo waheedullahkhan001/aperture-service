@@ -5,10 +5,12 @@ import com.aperture.apertureservice.domain.emergency.AlertConfiguration;
 import com.aperture.apertureservice.domain.emergency.EmergencyContact;
 import com.aperture.apertureservice.domain.emergency.api.GetAlertConfiguration;
 import com.aperture.apertureservice.domain.emergency.api.ListEmergencyContacts;
+import com.aperture.apertureservice.domain.recording.CancelResult;
 import com.aperture.apertureservice.domain.recording.EnsureResult;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.RecordingStatus;
 import com.aperture.apertureservice.domain.recording.api.AppendMetadataSamples;
+import com.aperture.apertureservice.domain.recording.api.CancelAlerts;
 import com.aperture.apertureservice.domain.recording.api.EndRecording;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
@@ -64,6 +66,7 @@ class DeviceApiControllerTest {
     @MockitoBean AppendMetadataSamples appendSamples;
     @MockitoBean GetAlertConfiguration getAlertConfig;
     @MockitoBean ListEmergencyContacts listContacts;
+    @MockitoBean CancelAlerts cancelAlerts;
 
     private final UUID userId = UUID.randomUUID();
     private final UUID deviceId = UUID.randomUUID();
@@ -114,6 +117,21 @@ class DeviceApiControllerTest {
         when(ensureRecording.ensure(recId, userId, null)).thenReturn(new EnsureResult(r, true));
         mvc.perform(put("/api/v1/device/recordings/" + recId).principal(asDevice()))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void cancelAlertsReturnsStateInBothOutcomes() throws Exception {
+        when(cancelAlerts.cancelAlerts(recId, userId)).thenReturn(new CancelResult(true, false));
+        mvc.perform(post("/api/v1/device/recordings/" + recId + "/cancel-alerts").principal(asDevice()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cancelled").value(true))
+                .andExpect(jsonPath("$.alertsAlreadyDispatched").value(false));
+
+        when(cancelAlerts.cancelAlerts(recId, userId)).thenReturn(new CancelResult(false, true));
+        mvc.perform(post("/api/v1/device/recordings/" + recId + "/cancel-alerts").principal(asDevice()))
+                .andExpect(status().isOk())   // still 2xx: the app must stop retrying
+                .andExpect(jsonPath("$.cancelled").value(false))
+                .andExpect(jsonPath("$.alertsAlreadyDispatched").value(true));
     }
 
     @Test
