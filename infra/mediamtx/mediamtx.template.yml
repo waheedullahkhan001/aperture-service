@@ -1,0 +1,52 @@
+logLevel: info
+logDestinations: [stdout]
+
+# Auth callback: mediamtx cannot send custom headers, but preserves this URL's
+# query verbatim in every callback — the backend accepts ?secret= on this one path.
+authMethod: http
+authHTTPAddress: http://backend:8080/internal/streams/auth?secret=__WEBHOOK_SECRET__
+authHTTPExclude:
+  - action: api
+  - action: metrics
+  - action: pprof
+
+# protocols we don't use
+rtmp: false
+srt: false
+moq: false
+
+rtspAddress: :8554
+hlsAddress: :8888
+webrtcAddress: :8889
+
+# deletion is exclusively the backend's job (default 1d would delete files
+# the DB still references)
+recordDeleteAfter: 0s
+
+paths:
+  "~^aperture/[0-9a-fA-F-]{36}$":
+    record: true
+    recordPath: /data/recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+    recordFormat: fmp4
+    recordSegmentDuration: 30s
+
+    # NOTE: hook names verified in Step 0 — there is no runOnPublish.
+    # $MTX_QUERY arrives URL-encoded; the backend decodes it.
+    runOnReady: >-
+      curl -s -o /dev/null -X POST http://backend:8080/internal/streams/hooks/publish-start
+      -H "Content-Type: application/json"
+      -H "Authorization: Bearer __WEBHOOK_SECRET__"
+      -d "{\"path\":\"$MTX_PATH\",\"query\":\"$MTX_QUERY\"}"
+    runOnReadyRestart: false
+
+    runOnNotReady: >-
+      curl -s -o /dev/null -X POST http://backend:8080/internal/streams/hooks/publish-end
+      -H "Content-Type: application/json"
+      -H "Authorization: Bearer __WEBHOOK_SECRET__"
+      -d "{\"path\":\"$MTX_PATH\"}"
+
+    runOnRecordSegmentComplete: >-
+      curl -s -o /dev/null -X POST http://backend:8080/internal/streams/hooks/segment-complete
+      -H "Content-Type: application/json"
+      -H "Authorization: Bearer __WEBHOOK_SECRET__"
+      -d "{\"path\":\"$MTX_PATH\",\"segmentPath\":\"$MTX_SEGMENT_PATH\",\"duration\":\"$MTX_SEGMENT_DURATION\"}"
