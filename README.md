@@ -25,7 +25,8 @@ Prereqs: JDK 21, Docker (only for tests).
     ./gradlew bootRun          # dev profile: H2 in-memory, emails logged to console
     ./gradlew test             # full suite (unit + Testcontainers Postgres integration)
 
-Swagger UI: http://localhost:8080/swagger-ui/index.html
+Dev server: http://localhost:8081 (8081 on purpose — see the note in `application-dev.yml`).
+API docs (Swagger UI) ship in a later iteration once springdoc supports Spring Boot 4.
 
 ## Profiles and environment
 

@@ -1,3 +1,9 @@
+# 8081, not 8080: an unrelated auto-starting container (kycwallet) squats 8080 on the dev
+# laptop AND answers /actuator/health with {"status":"UP"} — a convincing Aperture impostor.
+# Dev only; prod/Docker keep the container-internal 8080.
+server:
+  port: 8081
+
 spring:
   datasource:
     # ensure() uses a portable INSERT..WHERE NOT EXISTS (H2 2.4 rejects ON CONFLICT even in PG mode); duplicate-key races are caught in the adapter
