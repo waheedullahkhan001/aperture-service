@@ -1,0 +1,85 @@
+# Aperture — full stack on one host. `docker compose up -d --build` is UC-16.
+# Container set mirrors the submitted deployment diagram (Spring Boot, MediaMTX,
+# PostgreSQL; nginx arrives in the proxy step; mailpit stands in for the external
+# SMTP service during local dev).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aperture
+      POSTGRES_USER: aperture
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aperture -d aperture"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/aperture
+      DB_USERNAME: aperture
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      MEDIAMTX_WEBHOOK_SECRET: ${MEDIAMTX_WEBHOOK_SECRET}
+      MEDIAMTX_HLS_BASE: ${MEDIAMTX_HLS_BASE}
+      MEDIAMTX_WEBRTC_BASE: ${MEDIAMTX_WEBRTC_BASE}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      APP_MAIL_FROM: ${APP_MAIL_FROM}
+      APP_PUBLIC_ORIGIN: ${APP_PUBLIC_ORIGIN}
+      # APP_RECORDINGS_PATH defaults to /data/recordings — must equal the volume
+      # mount path below and mediamtx's recordPath root.
+    ports:
+      # host 8080 is squatted by an unrelated auto-starting container — never bind it.
+      # 8081 also matches the web session's dev expectation.
+      - "8081:8080"
+    volumes:
+      - recordings:/data/recordings
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      start_period: 40s
+      retries: 5
+
+  mediamtx:
+    build: infra/mediamtx
+    environment:
+      MEDIAMTX_WEBHOOK_SECRET: ${MEDIAMTX_WEBHOOK_SECRET}
+    ports:
+      - "8554:8554"   # RTSP publish (the phone)
+      - "8888:8888"   # HLS
+      - "8889:8889"   # WebRTC/WHEP
+    volumes:
+      - recordings:/data/recordings
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://localhost:8888/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit
+    environment:
+      # the backend's prod mail config sets mail.smtp.auth=true, so mailpit must
+      # advertise and accept (any) AUTH on an unencrypted connection
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "8025:8025"   # web UI + API; SMTP (1025) stays compose-internal
+
+volumes:
+  pgdata:
+  recordings:
