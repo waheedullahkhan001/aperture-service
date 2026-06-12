@@ -181,6 +181,17 @@ class AlertDispatchServiceTest {
                 .contains("Alice").contains("BCC: evil@example.com"); // flattened to one line, not a header
     }
 
+    @Test
+    void retrySkipsCancelledRecording() {
+        EmergencyContact mom = contacts.save(
+                new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
+        attempts.record(new AlertDispatchAttempt(null, recId, mom.id(), T0.minusSeconds(30), false, "x"));
+        recordings.save(recordings.byId(recId).orElseThrow().disarmed()); // user cancelled after the failed attempt
+
+        assertThat(service.retry()).isZero();
+        assertThat(emails.all()).isEmpty();
+    }
+
     /** Fails the first N sends, then succeeds. */
     static class FlakyEmailSender implements EmailSender {
         private final CapturingEmailSender delegate = new CapturingEmailSender();

@@ -90,7 +90,7 @@ public class AlertDispatchService implements DispatchAlerts, RetryFailedAlerts {
             if (attempts.anySuccess(failed.recordingId(), failed.contactId())) continue;
             if (attempts.countFor(failed.recordingId(), failed.contactId()) >= MAX_ATTEMPTS_PER_CONTACT) continue;
             Recording r = recordings.byId(failed.recordingId()).orElse(null);
-            if (r == null || !r.live()) continue;
+            if (r == null || !r.live() || r.countdownEndsAt() == null) continue; // cancelled recordings must not be retried
             EmergencyContact contact = contacts.byId(failed.contactId()).orElse(null);
             if (contact == null) continue;
             String ownerName = users.byId(r.userId()).map(User::fullname).orElse("An Aperture user");
