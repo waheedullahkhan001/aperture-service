@@ -1,0 +1,62 @@
+# Aperture proxy — TLS phase. Copied over templates/aperture.conf.template by the
+# deploy AFTER certbot has issued /etc/letsencrypt/live/${DOMAIN}/.
+# (envsubst with NGINX_ENVSUBST_FILTER=DOMAIN substitutes only ${DOMAIN}.)
+
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+    root /usr/share/nginx/html;
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    location = /healthz {
+        add_header Content-Type text/plain;
+        return 200 "ok\n";
+    }
+
+    # ---- common routing (keep in sync with templates/aperture.conf.template) ----
+
+    location /internal/ { return 404; }
+    location /actuator/ { return 404; }
+
+    location /api/ {
+        proxy_pass http://backend:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ~ ^/aperture/.+/whep {
+        proxy_pass http://mediamtx:8889;
+        proxy_set_header Host $host;
+    }
+
+    location /aperture/ {
+        proxy_pass http://mediamtx:8888;
+        proxy_set_header Host $host;
+        proxy_buffering off;
+    }
+
+    location ~ "^/watch/[0-9a-fA-F-]{36}$" {
+        try_files /watch.html =404;
+    }
+
+    location / {
+        index index.html;
+    }
+}
