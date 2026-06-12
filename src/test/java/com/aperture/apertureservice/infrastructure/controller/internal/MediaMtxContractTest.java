@@ -70,19 +70,31 @@ class MediaMtxContractTest {
     }
 
     @Test
-    void authEndpointDoesNotRequireWebhookSecret() throws Exception {
-        // /internal/streams/auth is intentionally excluded from WebhookSecretFilter:
-        // MediaMTX's auth callback has no way to send a custom header, and the endpoint
-        // validates stream tokens directly (so the webhook secret adds no security here).
+    void authEndpointAcceptsSecretViaQueryParam() throws Exception {
+        // MediaMTX cannot send custom headers in its auth callback, but it preserves the
+        // authHTTPAddress query string verbatim (verified against v1.19.1) — so the shared
+        // secret rides as ?secret=... on this one endpoint, header auth everywhere else.
         UUID recId = UuidCreator.getTimeOrderedEpoch();
-        // no Authorization header, but valid token in query -> allowed
-        mvc.perform(post("/internal/streams/auth").contentType("application/json")
+        // query-param secret, no header -> allowed through to the controller
+        mvc.perform(post("/internal/streams/auth").queryParam("secret", "dev-webhook-secret-change-me")
+                        .contentType("application/json")
                         .content(authBody("publish", "aperture/" + recId, "token=" + deviceToken)))
                 .andExpect(status().isNoContent());
-        // no Authorization header, invalid path -> 403 (controller, not filter)
+        // no secret at all -> 401 from the filter
         mvc.perform(post("/internal/streams/auth").contentType("application/json")
-                        .content(authBody("publish", "not-aperture/xyz", "")))
-                .andExpect(status().isForbidden());
+                        .content(authBody("publish", "aperture/" + recId, "token=" + deviceToken)))
+                .andExpect(status().isUnauthorized());
+        // wrong query secret -> 401
+        mvc.perform(post("/internal/streams/auth").queryParam("secret", "nope")
+                        .contentType("application/json")
+                        .content(authBody("publish", "aperture/" + recId, "token=" + deviceToken)))
+                .andExpect(status().isUnauthorized());
+        // the query-param fallback is for the auth callback ONLY — hooks still demand the header
+        mvc.perform(post("/internal/streams/hooks/publish-end").queryParam("secret", "dev-webhook-secret-change-me")
+                        .contentType("application/json")
+                        .content("""
+                                {"path":"aperture/%s"}""".formatted(recId)))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

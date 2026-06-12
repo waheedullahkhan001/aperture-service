@@ -16,6 +16,14 @@ import java.util.Optional;
 
 public class WebhookSecretFilter extends OncePerRequestFilter {
 
+    /**
+     * MediaMTX's authHTTPAddress callback cannot send custom headers, but it preserves the
+     * configured URL's query string verbatim (verified against v1.19.1) — so this one path
+     * may present the shared secret as ?secret=... instead of the Authorization header.
+     * Query strings can leak into access logs, which is why the fallback is not global.
+     */
+    private static final String MEDIAMTX_AUTH_CALLBACK = "/internal/streams/auth";
+
     private final String secret;
     private final ObjectMapper mapper;
 
@@ -26,11 +34,7 @@ public class WebhookSecretFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        // health: open by design
-        // streams/auth: MediaMTX's auth callback has no way to send a custom header;
-        // the endpoint is safe without the secret because it validates stream tokens internally
-        return uri.startsWith("/actuator/health") || uri.equals("/internal/streams/auth");
+        return request.getRequestURI().startsWith("/actuator/health");
     }
 
     @Override
@@ -38,6 +42,9 @@ public class WebhookSecretFilter extends OncePerRequestFilter {
                                     FilterChain chain) throws ServletException, IOException {
         String header = Optional.ofNullable(request.getHeader("Authorization")).orElse("");
         String presented = header.startsWith("Bearer ") ? header.substring(7) : "";
+        if (presented.isEmpty() && MEDIAMTX_AUTH_CALLBACK.equals(request.getRequestURI())) {
+            presented = Optional.ofNullable(request.getParameter("secret")).orElse("");
+        }
         if (MessageDigest.isEqual(presented.getBytes(StandardCharsets.UTF_8),
                 secret.getBytes(StandardCharsets.UTF_8))) {
             chain.doFilter(request, response);
