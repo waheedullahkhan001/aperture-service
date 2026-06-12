@@ -99,7 +99,9 @@ done
 [ "$HLS_CODE" = "200" ] || fail "HLS index returned $HLS_CODE after retries"
 VARIANT=$(curl -sL -c "$JAR" -b "$JAR" "$HLS_URL" | grep -oE '^[a-z0-9_]+_stream\.m3u8[^ ]*' | head -1)
 [ -n "$VARIANT" ] || fail "no variant playlist in HLS index"
-VCODE=$(curl -s -b "$JAR" -o /dev/null -w "%{http_code}" "$HLS/aperture/$REC/$VARIANT")
+# child URL must share the index URL's host or the cookie won't be sent
+HLS_DIR="${HLS_URL%/index.m3u8*}"
+VCODE=$(curl -s -b "$JAR" -o /dev/null -w "%{http_code}" "$HLS_DIR/$VARIANT")
 [ "$VCODE" = "200" ] || fail "variant playlist returned $VCODE (cookie session broken?)"
 rm -f "$JAR"
 
