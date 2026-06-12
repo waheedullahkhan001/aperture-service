@@ -26,7 +26,11 @@ public class WebhookSecretFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getRequestURI().startsWith("/actuator/health");
+        String uri = request.getRequestURI();
+        // health: open by design
+        // streams/auth: MediaMTX's auth callback has no way to send a custom header;
+        // the endpoint is safe without the secret because it validates stream tokens internally
+        return uri.startsWith("/actuator/health") || uri.equals("/internal/streams/auth");
     }
 
     @Override

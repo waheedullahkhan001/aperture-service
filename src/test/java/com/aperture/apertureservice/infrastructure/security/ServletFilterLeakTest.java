@@ -47,7 +47,9 @@ class ServletFilterLeakTest {
 
     @Test
     void internalChainStillRequiresSecretOnRealServer() throws Exception {
-        assertThat(get("/internal/streams/auth").statusCode()).isEqualTo(401);
+        // auth endpoint is intentionally open (MediaMTX can't send custom headers); validates tokens internally
+        assertThat(get("/internal/streams/auth").statusCode()).isNotEqualTo(401);
+        // hooks and metrics still require the shared secret
         assertThat(get("/actuator/metrics").statusCode()).isEqualTo(401);
     }
 }

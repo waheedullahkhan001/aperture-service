@@ -25,7 +25,10 @@ public final class StreamPaths {
 
     public static Optional<String> queryParam(String query, String name) {
         if (query == null || query.isBlank()) return Optional.empty();
-        for (String pair : query.split("&")) {
+        // mediamtx passes $MTX_QUERY with structural chars URL-encoded (e.g. "token%3Dvalue")
+        // while auth callback JSON has them raw — decode first so both forms work
+        String decoded = URLDecoder.decode(query, StandardCharsets.UTF_8);
+        for (String pair : decoded.split("&")) {
             int eq = pair.indexOf('=');
             if (eq > 0 && pair.substring(0, eq).equals(name)) {
                 return Optional.of(URLDecoder.decode(pair.substring(eq + 1), StandardCharsets.UTF_8));

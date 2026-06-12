@@ -31,8 +31,13 @@ class SecurityBootTest {
     }
 
     @Test
-    void internalRequiresSharedSecret() throws Exception {
-        mvc.perform(post("/internal/streams/auth").contentType("application/json").content("{}"))
+    void internalHooksRequireSharedSecret() throws Exception {
+        // hooks change state so they need the secret
+        mvc.perform(post("/internal/streams/hooks/publish-start").contentType("application/json").content("{}"))
                 .andExpect(status().isUnauthorized());
+        // auth endpoint is intentionally excluded: MediaMTX's auth callback cannot send custom headers,
+        // and token validation is built into the endpoint itself
+        mvc.perform(post("/internal/streams/auth").contentType("application/json").content("{}"))
+                .andExpect(status().isForbidden());  // reaches controller -> 403 for bad path
     }
 }

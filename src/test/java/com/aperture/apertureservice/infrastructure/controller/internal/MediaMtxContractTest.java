@@ -70,9 +70,19 @@ class MediaMtxContractTest {
     }
 
     @Test
-    void rejectsMissingSharedSecret() throws Exception {
-        mvc.perform(post("/internal/streams/auth").contentType("application/json").content("{}"))
-                .andExpect(status().isUnauthorized());
+    void authEndpointDoesNotRequireWebhookSecret() throws Exception {
+        // /internal/streams/auth is intentionally excluded from WebhookSecretFilter:
+        // MediaMTX's auth callback has no way to send a custom header, and the endpoint
+        // validates stream tokens directly (so the webhook secret adds no security here).
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+        // no Authorization header, but valid token in query -> allowed
+        mvc.perform(post("/internal/streams/auth").contentType("application/json")
+                        .content(authBody("publish", "aperture/" + recId, "token=" + deviceToken)))
+                .andExpect(status().isNoContent());
+        // no Authorization header, invalid path -> 403 (controller, not filter)
+        mvc.perform(post("/internal/streams/auth").contentType("application/json")
+                        .content(authBody("publish", "not-aperture/xyz", "")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -188,5 +198,18 @@ class MediaMtxContractTest {
                         .content("""
                                 {"path":"not-aperture/xyz","query":"token=apd_x"}"""))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void publishStartAcceptsUrlEncodedQuery() throws Exception {
+        // mediamtx sends $MTX_QUERY url-encoded: "token=apd_..." becomes "token%3Dapd_..."
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+        String encodedQuery = "token%3D" + deviceToken;   // %3D = '='
+        mvc.perform(post("/internal/streams/hooks/publish-start").header("Authorization", SECRET)
+                        .contentType("application/json")
+                        .content("""
+                                {"path":"aperture/%s","query":"%s"}""".formatted(recId, encodedQuery)))
+                .andExpect(status().isNoContent());
+        assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.RECORDING);
     }
 }
