@@ -32,20 +32,20 @@ paths:
     # NOTE: hook names verified in Step 0 — there is no runOnPublish.
     # $MTX_QUERY arrives URL-encoded; the backend decodes it.
     runOnReady: >-
-      curl -s -o /dev/null -X POST http://backend:8080/internal/streams/hooks/publish-start
+      curl -sS -o /dev/null -X POST http://backend:8080/internal/streams/hooks/publish-start
       -H "Content-Type: application/json"
       -H "Authorization: Bearer __WEBHOOK_SECRET__"
       -d "{\"path\":\"$MTX_PATH\",\"query\":\"$MTX_QUERY\"}"
     runOnReadyRestart: false
 
     runOnNotReady: >-
-      curl -s -o /dev/null -X POST http://backend:8080/internal/streams/hooks/publish-end
+      curl -sS -o /dev/null -X POST http://backend:8080/internal/streams/hooks/publish-end
       -H "Content-Type: application/json"
       -H "Authorization: Bearer __WEBHOOK_SECRET__"
       -d "{\"path\":\"$MTX_PATH\"}"
 
     runOnRecordSegmentComplete: >-
-      curl -s -o /dev/null -X POST http://backend:8080/internal/streams/hooks/segment-complete
+      curl -sS -o /dev/null -X POST http://backend:8080/internal/streams/hooks/segment-complete
       -H "Content-Type: application/json"
       -H "Authorization: Bearer __WEBHOOK_SECRET__"
       -d "{\"path\":\"$MTX_PATH\",\"segmentPath\":\"$MTX_SEGMENT_PATH\",\"duration\":\"$MTX_SEGMENT_DURATION\"}"
