@@ -19,16 +19,15 @@ rtspAddress: :8554
 hlsAddress: :8888
 webrtcAddress: :8889
 
-# deletion is exclusively the backend's job (default 1d would delete files
-# the DB still references)
-recordDeleteAfter: 0s
-
 paths:
   "~^aperture/[0-9a-fA-F-]{36}$":
     record: true
     recordPath: /data/recordings/%path/%Y-%m-%d_%H-%M-%S-%f
     recordFormat: fmp4
     recordSegmentDuration: 30s
+    # deletion is exclusively the backend's job (default 1d would delete files
+    # the DB still references)
+    recordDeleteAfter: 0s
 
     # NOTE: hook names verified in Step 0 — there is no runOnPublish.
     # $MTX_QUERY arrives URL-encoded; the backend decodes it.
