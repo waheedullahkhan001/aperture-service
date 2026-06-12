@@ -112,3 +112,29 @@ Health and monitoring (UC-18): `GET /actuator/health` is open; `/actuator/metric
 Deployment requirements mapping: Docker deployment configuration provided (SRS-063); all required services included — application server, database, streaming server (SRS-064); Docker containerisation throughout (SRS-087). Compose healthchecks plus `depends_on: condition: service_healthy` make `docker compose up -d --build` verify inter-service communication before reporting up (UC-16).
 
 Deliberate MVP limitations: containers run as root so the backend can delete segment files created by mediamtx in the shared volume; the mediamtx auth callback authenticates via a `?secret=` query parameter because mediamtx cannot send custom headers — in production the backend port is not exposed beyond the compose network, and the endpoint only answers allow/deny against 256-bit secrets.
+
+### With the nginx proxy (same-origin, production shape)
+
+`docker compose up -d` includes nginx on :80/:443 — the API, HLS, and the watch
+page share one origin: `http://localhost/watch/<id>?t=...` plays live streams
+with no CORS or cookie configuration. Internal surfaces (`/internal`,
+`/actuator`) return 404 through the proxy; loopback ports (8081/8888/8889/8025)
+remain for direct access and the smoke script.
+
+### Server deployment (TLS)
+
+1. DNS: an A record for your domain → server IP (Cloudflare: DNS-only, NOT
+   proxied — RTSP runs on raw TCP 8554 which proxies won't carry).
+2. Clone the repo, `cp .env.example .env`, fill real values (`DOMAIN`,
+   `CERTBOT_EMAIL`, `APP_PUBLIC_ORIGIN=https://<domain>`,
+   `MEDIAMTX_HLS_BASE=https://<domain>`, `MEDIAMTX_WEBRTC_BASE=https://<domain>`,
+   real SMTP — `SMTP_SSL=true` for implicit-TLS ports like 465).
+   `docker compose up -d --build` — the stack starts in HTTP bootstrap mode.
+3. Issue the certificate:
+   `docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d <domain> --email <email> --agree-tos --no-eff-email`
+4. Switch nginx to TLS:
+   `cp infra/nginx/aperture-tls.conf.template infra/nginx/templates/aperture.conf.template && docker compose up -d --force-recreate nginx`
+5. Renewal (cron, twice monthly):
+   `docker compose run --rm certbot renew && docker compose up -d --force-recreate nginx`
+6. Open firewall ports 80, 443, 8554 (both the cloud security list AND any
+   on-instance iptables).
