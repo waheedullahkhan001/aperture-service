@@ -3,10 +3,12 @@ package com.aperture.apertureservice.infrastructure.controller.web;
 import com.aperture.apertureservice.domain.recording.RecordingDetail;
 import com.aperture.apertureservice.domain.recording.RecordingStatus;
 import com.aperture.apertureservice.domain.recording.SegmentDownload;
+import com.aperture.apertureservice.domain.recording.WatchUrls;
 import com.aperture.apertureservice.domain.recording.api.DeleteRecording;
 import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
 import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
+import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -32,13 +34,16 @@ public class RecordingsController {
     private final GetRecording getRecording;
     private final DownloadSegment downloadSegment;
     private final DeleteRecording deleteRecording;
+    private final AppProperties props;
 
     public RecordingsController(ListRecordings listRecordings, GetRecording getRecording,
-                                DownloadSegment downloadSegment, DeleteRecording deleteRecording) {
+                                DownloadSegment downloadSegment, DeleteRecording deleteRecording,
+                                AppProperties props) {
         this.listRecordings = listRecordings;
         this.getRecording = getRecording;
         this.downloadSegment = downloadSegment;
         this.deleteRecording = deleteRecording;
+        this.props = props;
     }
 
     @GetMapping
@@ -56,7 +61,8 @@ public class RecordingsController {
         RecordingDetail d = getRecording.get(MeController.userId(auth), id);
         return new RecordingDtos.DetailResponse(RecordingDtos.RecordingResponse.from(d.recording()),
                 d.segments().stream().map(RecordingDtos.SegmentResponse::from).toList(),
-                d.recentSamples().stream().map(RecordingDtos.SampleResponse::from).toList());
+                d.recentSamples().stream().map(RecordingDtos.SampleResponse::from).toList(),
+                WatchUrls.of(props.publicOrigin(), d.recording().id(), d.recording().viewSecret()));
     }
 
     @GetMapping("/{id}/segments/{n}/download")

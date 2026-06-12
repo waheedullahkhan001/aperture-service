@@ -13,12 +13,16 @@ import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.GetWatchView;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
 import com.aperture.apertureservice.ddd.PageOf;
+import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
 import com.aperture.apertureservice.infrastructure.controller.publicapi.WatchController;
 import com.aperture.apertureservice.infrastructure.security.AuthenticatedUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -45,7 +49,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = {RecordingsController.class, WatchController.class})
 @AutoConfigureMockMvc(addFilters = false)
+@Import(RecordingsControllerTest.Props.class)
 class RecordingsControllerTest {
+
+    @TestConfiguration
+    static class Props {
+        @Bean AppProperties appProperties() {
+            return new AppProperties("http://localhost", "/tmp", "secret",
+                    new AppProperties.Jwt("x", java.time.Duration.ofMinutes(15)),
+                    new AppProperties.Session(java.time.Duration.ofDays(30)),
+                    new AppProperties.Streaming("http://localhost:8888", "http://localhost:8889"),
+                    new AppProperties.Schedule(java.time.Duration.ofSeconds(5), java.time.Duration.ofMinutes(5), java.time.Duration.ofSeconds(60)));
+        }
+    }
 
     @Autowired MockMvc mvc;
     @MockitoBean ListRecordings listRecordings;
@@ -87,7 +103,8 @@ class RecordingsControllerTest {
 
         mvc.perform(get("/api/v1/recordings/" + recId).principal(asUser()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.segments[0].segmentNumber").value(1));
+                .andExpect(jsonPath("$.segments[0].segmentNumber").value(1))
+                .andExpect(jsonPath("$.watchUrl").value("http://localhost/watch/" + recId + "?t=apv_s"));
         mvc.perform(get("/api/v1/recordings/" + recId + "/segments/1/download").principal(asUser()))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", containsString(recId + "-1.mp4")))

@@ -36,7 +36,7 @@ public final class RecordingDtos {
     }
 
     public record DetailResponse(RecordingResponse recording, List<SegmentResponse> segments,
-                                 List<SampleResponse> recentSamples) {}
+                                 List<SampleResponse> recentSamples, String watchUrl) {}
 
     public record PageResponse<T>(List<T> content, int page, int size, long totalElements, int totalPages) {
         public static <S, T> PageResponse<T> from(PageOf<S> page, Function<S, T> mapper) {
