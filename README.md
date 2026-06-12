@@ -80,3 +80,34 @@ in a later iteration once a compatible release is available.
 
 - Phase 2: docker-compose deployment (PostgreSQL, MediaMTX, Nginx, watch page).
 - Phase 3: web management UI.
+
+## Running the whole stack locally
+
+Prereqs: Docker + Docker Compose. The backend runs its **prod** profile inside compose — everything is environment-driven (UC-17), and a startup guard refuses to boot with placeholder secrets.
+
+```bash
+cp .env.example .env        # then fill in the three secrets (commands in the file)
+docker compose up -d --build
+docker compose ps           # postgres, backend, mediamtx, mailpit — all healthy
+./scripts/compose-smoke.sh  # full emergency journey, no phone needed
+```
+
+Services and host ports:
+
+| Service | Image | Host ports | Purpose |
+|---|---|---|---|
+| backend | built from `Dockerfile` (prod profile) | 8081 → 8080 | REST API + stream auth/hooks |
+| mediamtx | built from `infra/mediamtx/` (pinned 1.19.1 + curl) | 8554, 8888, 8889 | RTSP publish, HLS, WebRTC |
+| postgres | postgres:16-alpine | — | persistence (named volume `pgdata`) |
+| mailpit | axllent/mailpit | 8025 | dev SMTP sink + web UI (http://localhost:8025) |
+
+Two invariants worth knowing:
+
+- The `recordings` volume is mounted at `/data/recordings` in BOTH mediamtx and the backend — the backend stores absolute segment paths from mediamtx hooks verbatim, so the mount paths must be identical.
+- Publishers must use **RTSP over TCP** (interleaved). Only 8554/TCP is published; the UDP RTP/RTCP ports are not, so UDP transport times out.
+
+Health and monitoring (UC-18): `GET /actuator/health` is open; `/actuator/metrics` and `/actuator/prometheus` require the webhook shared secret (`Authorization: Bearer ...`); `docker compose logs -f <service>` for logs.
+
+Deployment requirements mapping: Docker deployment configuration provided (SRS-063); all required services included — application server, database, streaming server (SRS-064); Docker containerisation throughout (SRS-087). Compose healthchecks plus `depends_on: condition: service_healthy` make `docker compose up -d --build` verify inter-service communication before reporting up (UC-16).
+
+Deliberate MVP limitations: containers run as root so the backend can delete segment files created by mediamtx in the shared volume; the mediamtx auth callback authenticates via a `?secret=` query parameter because mediamtx cannot send custom headers — in production the backend port is not exposed beyond the compose network, and the endpoint only answers allow/deny against 256-bit secrets.
