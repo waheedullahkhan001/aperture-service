@@ -28,6 +28,13 @@ app:
   streaming:
     hls-base: "${MEDIAMTX_HLS_BASE}"
     webrtc-base: "${MEDIAMTX_WEBRTC_BASE}"
+management:
+  health:
+    mail:
+      # an unreachable/misconfigured SMTP server must not flip the container
+      # unhealthy (and cascade into nginx's depends_on) — alert dispatch has
+      # its own retry sweep, and mail failures are visible in logs
+      enabled: false
 logging:
   level:
     com.aperture: INFO
