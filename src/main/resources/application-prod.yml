@@ -13,7 +13,11 @@ spring:
     password: "${SMTP_PASSWORD}"
     properties:
       mail.smtp.auth: true
+      # opportunistic STARTTLS (ignored when the connection is already TLS)
       mail.smtp.starttls.enable: true
+      # implicit TLS for submission ports like 465 (e.g. Stalwart); false for
+      # plain dev sinks like mailpit
+      mail.smtp.ssl.enable: "${SMTP_SSL:false}"
 app:
   public-origin: "${APP_PUBLIC_ORIGIN}"
   mail-from: "${APP_MAIL_FROM}"
