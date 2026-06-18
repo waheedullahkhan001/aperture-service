@@ -20,9 +20,16 @@ metadata, stream authorization), `emergency` (contacts, alert configuration, dis
 
 ## Running locally
 
-Prereqs: JDK 21, Docker (only for tests).
+Prereqs: JDK 21, Docker.
 
-    ./gradlew bootRun          # dev profile: H2 in-memory, emails logged to console
+Dev runs against a local Postgres (matching prod). Start one once:
+
+    docker run --rm -d --name aperture-dev-db -p 5432:5432 \
+      -e POSTGRES_DB=aperture -e POSTGRES_USER=aperture -e POSTGRES_PASSWORD=devpass postgres:16-alpine
+
+Then `./gradlew bootRun` (dev profile) — Flyway builds the schema on start.
+
+    ./gradlew bootRun          # dev profile: Docker Postgres, emails logged to console
     ./gradlew test             # full suite (unit + Testcontainers Postgres integration)
 
 Dev server: http://localhost:8081 (8081 on purpose — see the note in `application-dev.yml`).
@@ -32,7 +39,7 @@ API docs (Swagger UI) ship in a later iteration once springdoc supports Spring B
 
 | Profile | Database | Email | Notes |
 |---|---|---|---|
-| `dev` (default) | H2 in-memory (PostgreSQL mode) | logged to console | permissive CORS, H2 console |
+| `dev` (default) | Docker Postgres 16 | logged to console | permissive CORS |
 | `test` | Testcontainers PostgreSQL | captured in-memory | used by the test suite |
 | `prod` | PostgreSQL | SMTP | fails fast on placeholder secrets |
 
@@ -56,9 +63,7 @@ Prod environment variables: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`
 
 ## Known limitations (deliberate, documented)
 
-1. No schema migrations — Hibernate `ddl-auto`. A migration tool is planned before any
-   real multi-user deployment.
-2. No rate limiting beyond verification-code cooldown/lockout.
+1. No rate limiting beyond verification-code cooldown/lockout.
 3. Device tokens do not expire by design (reliability first); compensated by hashed
    storage, TLS-only transport, and one-click revocation.
 4. Web access tokens are irrevocable within their ~15-minute lifetime.

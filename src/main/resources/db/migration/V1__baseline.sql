@@ -1,4 +1,3 @@
-\restrict vywBcvUW8f2LDUaBfT4xkeBkJvLairpI0jaBUcQJHa6aRLX46VdCvaAxS36U5OU
 CREATE TABLE public.alert_configurations (
     countdown_duration_seconds integer NOT NULL,
     user_id uuid NOT NULL,
@@ -150,4 +149,3 @@ ALTER TABLE ONLY public.verification_codes
 CREATE INDEX idx_metadata_recording_time ON public.metadata_samples USING btree (recording_id, client_timestamp);
 CREATE INDEX idx_recordings_countdown ON public.recordings USING btree (countdown_ends_at);
 CREATE INDEX idx_recordings_user_status ON public.recordings USING btree (user_id, status);
-\unrestrict vywBcvUW8f2LDUaBfT4xkeBkJvLairpI0jaBUcQJHa6aRLX46VdCvaAxS36U5OU
