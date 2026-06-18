@@ -1,10 +1,15 @@
-# Aperture — full stack on one host. `docker compose up -d --build` is UC-16.
-# Container set mirrors the submitted deployment diagram (Spring Boot, MediaMTX,
-# PostgreSQL; nginx arrives in the proxy step; mailpit stands in for the external
-# SMTP service during local dev).
+# Aperture — the whole product on one host. Deploy is: clone, fill .env,
+# `docker compose up -d --build`. That single command brings up Postgres, the
+# Spring Boot backend, MediaMTX, mailpit, and the nginx edge — which obtains and
+# auto-renews its TLS cert by itself (no host cron, no manual cert step).
+# Container set matches the submitted deployment diagram: Nginx, Spring Boot,
+# MediaMTX, PostgreSQL (+ mailpit standing in for the external SMTP service until
+# a real provider is wired). Only nginx (80/443) and RTSP (8554) face the public;
+# the backend, HLS, WebRTC and mailpit ports stay bound to loopback behind nginx.
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: aperture
       POSTGRES_USER: aperture
@@ -19,6 +24,7 @@ services:
 
   backend:
     build: .
+    restart: unless-stopped
     environment:
       DB_URL: jdbc:postgresql://postgres:5432/aperture
       DB_USERNAME: aperture
@@ -38,8 +44,7 @@ services:
       # mount path below and mediamtx's recordPath root.
     ports:
       # host 8080 is squatted by an unrelated auto-starting container — never bind it.
-      # 8081 also matches the web session's dev expectation. Loopback-only:
-      # public API traffic goes through nginx.
+      # loopback-only: public API traffic goes through nginx.
       - "127.0.0.1:8081:8080"
     volumes:
       - recordings:/data/recordings
@@ -55,6 +60,7 @@ services:
 
   mediamtx:
     build: infra/mediamtx
+    restart: unless-stopped
     environment:
       MEDIAMTX_WEBHOOK_SECRET: ${MEDIAMTX_WEBHOOK_SECRET}
     ports:
@@ -75,6 +81,7 @@ services:
 
   mailpit:
     image: axllent/mailpit
+    restart: unless-stopped
     environment:
       # the backend's prod mail config sets mail.smtp.auth=true, so mailpit must
       # advertise and accept (any) AUTH on an unencrypted connection
@@ -84,46 +91,34 @@ services:
       - "127.0.0.1:8025:8025"   # web UI + API (loopback); SMTP (1025) stays compose-internal
 
   nginx:
-    image: nginx:1.27-alpine
+    # self-contained edge: nginx + static web build + certbot auto-TLS, all in one
+    # image (see infra/nginx/Dockerfile). DOMAIN is baked into the served config at
+    # build time; CERTBOT_EMAIL drives Let's Encrypt registration at runtime.
+    build:
+      context: infra/nginx
+      args:
+        DOMAIN: ${DOMAIN}
+    restart: unless-stopped
     environment:
-      DOMAIN: ${DOMAIN}
-      # envsubst would otherwise eat nginx runtime vars like $host in templates
-      NGINX_ENVSUBST_FILTER: DOMAIN
+      CERTBOT_EMAIL: ${CERTBOT_EMAIL}
+      # set STAGING=1 in .env while testing to avoid Let's Encrypt rate limits
+      STAGING: ${CERTBOT_STAGING:-0}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./infra/nginx/templates:/etc/nginx/templates:ro
-      # WEB_ROOT lets the real web build (sibling repo) replace the interim static
-      # files without touching this file; defaults to the bundled interim page.
-      - ${WEB_ROOT:-./infra/nginx/static}:/usr/share/nginx/html:ro
-      - ./infra/nginx/no-default.conf:/etc/nginx/conf.d/default.conf:ro
-      - certbot_webroot:/var/www/certbot
-      - letsencrypt:/etc/letsencrypt:ro
+      - letsencrypt:/etc/letsencrypt   # certs + dhparam persist here (jonasal writes them)
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      # 127.0.0.1 explicitly: in-container localhost can resolve to ::1 and the
-      # server listens on IPv4 only
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/healthz"]
+      test: ["CMD", "wget", "--no-check-certificate", "-q", "--spider", "https://127.0.0.1/healthz"]
       interval: 10s
       timeout: 3s
-      start_period: 5s
+      start_period: 60s
       retries: 5
-
-  # run-once tool, not a long-running service:
-  #   docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
-  #     -d $DOMAIN --email $CERTBOT_EMAIL --agree-tos --no-eff-email
-  certbot:
-    image: certbot/certbot
-    profiles: ["tools"]
-    volumes:
-      - certbot_webroot:/var/www/certbot
-      - letsencrypt:/etc/letsencrypt
 
 volumes:
   pgdata:
   recordings:
-  certbot_webroot:
   letsencrypt:
