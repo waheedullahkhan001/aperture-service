@@ -1,18 +1,15 @@
 package com.aperture.apertureservice.infrastructure.persistence.recording;
 
-import com.aperture.apertureservice.TestcontainersConfiguration;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.RecordingStatus;
 import com.aperture.apertureservice.infrastructure.persistence.recording.jpa.JpaRecordings;
+import com.aperture.apertureservice.support.JpaSliceTest;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +21,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@Import({TestcontainersConfiguration.class, JpaRecordings.class})
-@ActiveProfiles("test")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@JpaSliceTest
+@Import(JpaRecordings.class)
 class JpaRecordingsTest {
 
     @Autowired

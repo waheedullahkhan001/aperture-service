@@ -1,24 +1,19 @@
 package com.aperture.apertureservice.infrastructure.persistence.emergency;
 
-import com.aperture.apertureservice.TestcontainersConfiguration;
 import com.aperture.apertureservice.domain.emergency.AlertDispatchAttempt;
 import com.aperture.apertureservice.infrastructure.persistence.emergency.jpa.JpaAlertDispatchAttempts;
+import com.aperture.apertureservice.support.JpaSliceTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
-@Import({TestcontainersConfiguration.class, JpaAlertDispatchAttempts.class})
-@ActiveProfiles("test")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@JpaSliceTest
+@Import(JpaAlertDispatchAttempts.class)
 class JpaAlertDispatchAttemptsTest {
 
     @Autowired

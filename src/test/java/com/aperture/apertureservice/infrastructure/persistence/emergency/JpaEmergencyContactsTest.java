@@ -1,27 +1,22 @@
 package com.aperture.apertureservice.infrastructure.persistence.emergency;
 
-import com.aperture.apertureservice.TestcontainersConfiguration;
 import com.aperture.apertureservice.domain.account.Email;
 import com.aperture.apertureservice.domain.emergency.EmergencyContact;
 import com.aperture.apertureservice.infrastructure.persistence.emergency.jpa.JpaEmergencyContacts;
+import com.aperture.apertureservice.support.JpaSliceTest;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
-@Import({TestcontainersConfiguration.class, JpaEmergencyContacts.class})
-@ActiveProfiles("test")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@JpaSliceTest
+@Import(JpaEmergencyContacts.class)
 class JpaEmergencyContactsTest {
 
     @Autowired
