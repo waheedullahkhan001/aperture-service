@@ -1,7 +1,7 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
 app:
   recordings-path: "${java.io.tmpdir}/aperture-test-recordings"
   schedule:
