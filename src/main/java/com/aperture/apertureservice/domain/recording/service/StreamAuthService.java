@@ -8,6 +8,7 @@ import com.aperture.apertureservice.domain.account.User;
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.domain.recording.Recording;
+import com.aperture.apertureservice.domain.recording.RecordingSegment;
 import com.aperture.apertureservice.domain.recording.SegmentDownload;
 import com.aperture.apertureservice.domain.recording.WatchSegment;
 import com.aperture.apertureservice.domain.recording.WatchView;
@@ -72,7 +73,7 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
         Recording r = verifiedRow(recordingId, viewSecret);
         String ownerName = users.byId(r.userId()).map(User::fullname).orElse("Unknown");
         List<WatchSegment> watchSegments = segments.byRecording(recordingId).stream()
-                .sorted(Comparator.comparing(s -> s.startTime() != null ? s.startTime() : java.time.Instant.EPOCH))
+                .sorted(Comparator.comparingInt(RecordingSegment::segmentNumber))
                 .map(s -> new WatchSegment(s.segmentNumber(), s.startTime(), s.endTime(),
                         s.source() != null ? s.source().name() : "STREAMED", s.quality(), s.sizeBytes()))
                 .toList();
