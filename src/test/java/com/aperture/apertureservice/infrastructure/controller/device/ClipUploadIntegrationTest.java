@@ -86,16 +86,14 @@ class ClipUploadIntegrationTest {
 
     private MvcResult uploadClip(UUID recId, byte[] bytes, String filename,
                                  String startTime, String endTime,
-                                 Integer segmentNumber) throws Exception {
+                                 String clipId) throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", filename, "video/mp4", bytes);
         var request = multipart("/api/v1/device/recordings/{id}/clips", recId)
                 .file(file)
                 .param("startTime", startTime)
                 .param("endTime", endTime)
+                .param("clipId", clipId)
                 .header("Authorization", "Bearer " + deviceToken);
-        if (segmentNumber != null) {
-            request = request.param("segmentNumber", String.valueOf(segmentNumber));
-        }
         return mvc.perform(request).andReturn();
     }
 
@@ -105,11 +103,11 @@ class ClipUploadIntegrationTest {
         String start = "2026-06-19T10:00:00Z";
         String end   = "2026-06-19T10:01:00Z";
 
-        MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "clip1.mp4", start, end, 1);
+        MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "clip1.mp4", start, end, "clip-1");
         assertThat(result.getResponse().getStatus()).isEqualTo(201);
 
         JsonNode body = json.readTree(result.getResponse().getContentAsString());
-        assertThat(body.get("segmentNumber").asInt()).isEqualTo(1);
+        assertThat(body.get("segmentNumber").asInt()).isEqualTo(1); // server-assigned; first in recording
         assertThat(body.get("source").asText()).isEqualTo("UPLOADED");
 
         // Recording exists and is ENDED
@@ -140,7 +138,7 @@ class ClipUploadIntegrationTest {
         String start = "2026-06-19T10:00:00.123Z";
         String end   = "2026-06-19T10:00:30.456Z";
 
-        MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "frac.mp4", start, end, 1);
+        MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "frac.mp4", start, end, "clip-frac");
         assertThat(result.getResponse().getStatus()).isEqualTo(201);
 
         RecordingSegment seg = segments.byRecording(recId).get(0);
@@ -155,12 +153,12 @@ class ClipUploadIntegrationTest {
         String end   = "2026-06-19T11:01:00Z";
 
         // First upload
-        MvcResult first = uploadClip(recId, CLIP_CONTENT.getBytes(), "clip1.mp4", start, end, 1);
+        MvcResult first = uploadClip(recId, CLIP_CONTENT.getBytes(), "clip1.mp4", start, end, "clip-idem-1");
         assertThat(first.getResponse().getStatus()).isEqualTo(201);
         JsonNode firstBody = json.readTree(first.getResponse().getContentAsString());
 
-        // Second upload with same segmentNumber — must not duplicate
-        MvcResult second = uploadClip(recId, "different-bytes".getBytes(), "clip1_v2.mp4", start, end, 1);
+        // Second upload with same clipId — must not duplicate
+        MvcResult second = uploadClip(recId, "different-bytes".getBytes(), "clip1_v2.mp4", start, end, "clip-idem-1");
         assertThat(second.getResponse().getStatus()).isEqualTo(201);
         JsonNode secondBody = json.readTree(second.getResponse().getContentAsString());
 
@@ -178,7 +176,7 @@ class ClipUploadIntegrationTest {
         recordings.insertIfAbsent(foreign);
 
         MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "clip.mp4",
-                "2026-06-19T12:00:00Z", "2026-06-19T12:01:00Z", null);
+                "2026-06-19T12:00:00Z", "2026-06-19T12:01:00Z", "clip-foreign-1");
         assertThat(result.getResponse().getStatus()).isEqualTo(403);
     }
 
@@ -193,7 +191,7 @@ class ClipUploadIntegrationTest {
         recordings.insertIfAbsent(liveRec);
 
         MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "gap.mp4",
-                "2026-06-19T14:00:00Z", "2026-06-19T14:00:30Z", 7);
+                "2026-06-19T14:00:00Z", "2026-06-19T14:00:30Z", "clip-gap-7");
         assertThat(result.getResponse().getStatus()).isEqualTo(201);
 
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.RECORDING);
@@ -204,12 +202,87 @@ class ClipUploadIntegrationTest {
     void downloadUploadedSegmentReturnsBytes() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         uploadClip(recId, CLIP_CONTENT.getBytes(), "clip1.mp4",
-                "2026-06-19T13:00:00Z", "2026-06-19T13:01:00Z", 1);
+                "2026-06-19T13:00:00Z", "2026-06-19T13:01:00Z", "clip-dl-1");
 
         mvc.perform(get("/api/v1/recordings/{id}/segments/1/download", recId)
                         .header("Authorization", "Bearer " + userJwt))
                 .andExpect(status().isOk())
                 .andExpect(content().bytes(CLIP_CONTENT.getBytes()));
+    }
+
+    /**
+     * Regression: on one recording, a streamed segment (number=1) and an uploaded clip used
+     * to share one number-space. The phone supplies number=1 for its first gap clip, which
+     * collides with the streamed segment. Before the fix the idempotency check found the
+     * streamed segment and silently dropped the upload. Now the server assigns the next
+     * available number, so both segments are stored with distinct numbers.
+     */
+    @Test
+    void streamedAndUploadedOnSameRecordingAreBothStored() throws Exception {
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+
+        // 1. Start a live stream
+        mvc.perform(post("/internal/streams/hooks/publish-start")
+                        .header("Authorization", HOOK_SECRET)
+                        .contentType("application/json")
+                        .content("""
+                                {"path":"aperture/%s","query":"token=%s"}""".formatted(recId, deviceToken)))
+                .andExpect(status().isNoContent());
+
+        // 2. Fire one segment-complete — this creates streamed segment #1
+        Path dir = Files.createDirectories(
+                Path.of(props.recordingsPath(), "aperture", recId.toString()));
+        Path segFile = Files.write(dir.resolve("seg1.mp4"), new byte[]{1, 2, 3});
+        mvc.perform(post("/internal/streams/hooks/segment-complete")
+                        .header("Authorization", HOOK_SECRET)
+                        .contentType("application/json")
+                        .content("""
+                                {"path":"aperture/%s","segmentPath":"%s","duration":"5.0"}"""
+                                .formatted(recId, segFile)))
+                .andExpect(status().isNoContent());
+
+        // 3. Upload a gap clip — the phone supplies clipId="gap-1". Prior to the fix, the server
+        //    would have compared number=1 (phone-supplied) against the already-stored streamed
+        //    segment #1 and silently returned it, dropping the upload entirely.
+        MvcResult upload = uploadClip(recId, CLIP_CONTENT.getBytes(), "gap.mp4",
+                "2026-06-19T20:00:00Z", "2026-06-19T20:00:30Z", "gap-1");
+        assertThat(upload.getResponse().getStatus()).isEqualTo(201);
+
+        // 4. Both segments must be in the DB with distinct segment numbers
+        List<RecordingSegment> stored = segments.byRecording(recId);
+        assertThat(stored).hasSize(2);
+
+        List<Integer> numbers = stored.stream().map(RecordingSegment::segmentNumber).sorted().toList();
+        assertThat(numbers).containsExactly(1, 2); // distinct numbers
+
+        List<SegmentSource> sources = stored.stream()
+                .sorted(java.util.Comparator.comparingInt(RecordingSegment::segmentNumber))
+                .map(RecordingSegment::source).toList();
+        assertThat(sources).containsExactly(SegmentSource.STREAMED, SegmentSource.UPLOADED);
+
+        // 5. The uploaded clip response must report its server-assigned number (2, not 1)
+        JsonNode body = json.readTree(upload.getResponse().getContentAsString());
+        assertThat(body.get("segmentNumber").asInt()).isEqualTo(2);
+    }
+
+    @Test
+    void differentClipIdsCreateDistinctSegments() throws Exception {
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+        String start = "2026-06-19T21:00:00Z";
+        String end   = "2026-06-19T21:01:00Z";
+
+        MvcResult first = uploadClip(recId, CLIP_CONTENT.getBytes(), "a.mp4", start, end, "clip-A");
+        assertThat(first.getResponse().getStatus()).isEqualTo(201);
+        JsonNode firstBody = json.readTree(first.getResponse().getContentAsString());
+
+        MvcResult second = uploadClip(recId, "other-bytes".getBytes(), "b.mp4", start, end, "clip-B");
+        assertThat(second.getResponse().getStatus()).isEqualTo(201);
+        JsonNode secondBody = json.readTree(second.getResponse().getContentAsString());
+
+        // Different clipIds → different segments with different server-assigned numbers
+        assertThat(secondBody.get("segmentId").asLong()).isNotEqualTo(firstBody.get("segmentId").asLong());
+        assertThat(secondBody.get("segmentNumber").asInt()).isNotEqualTo(firstBody.get("segmentNumber").asInt());
+        assertThat(segments.byRecording(recId)).hasSize(2);
     }
 
     @Test

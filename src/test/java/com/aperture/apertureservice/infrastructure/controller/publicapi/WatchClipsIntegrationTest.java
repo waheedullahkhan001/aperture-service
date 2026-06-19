@@ -69,13 +69,13 @@ class WatchClipsIntegrationTest {
 
     /** Upload a clip via the device endpoint, returns the viewSecret for the created recording. */
     private String uploadClipAndGetSecret(UUID recId, byte[] bytes, String start, String end,
-                                          int segmentNumber) throws Exception {
+                                          String clipId) throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "clip.mp4", "video/mp4", bytes);
         mvc.perform(multipart("/api/v1/device/recordings/{id}/clips", recId)
                         .file(file)
                         .param("startTime", start)
                         .param("endTime", end)
-                        .param("segmentNumber", String.valueOf(segmentNumber))
+                        .param("clipId", clipId)
                         .header("Authorization", "Bearer " + deviceToken))
                 .andExpect(status().isCreated());
         return recordings.byId(recId).orElseThrow().viewSecret();
@@ -88,7 +88,7 @@ class WatchClipsIntegrationTest {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         String start = "2026-06-19T10:00:00Z";
         String end   = "2026-06-19T10:01:00Z";
-        String secret = uploadClipAndGetSecret(recId, CLIP_BYTES, start, end, 1);
+        String secret = uploadClipAndGetSecret(recId, CLIP_BYTES, start, end, "clip-1");
 
         mvc.perform(get("/api/public/watch/{id}", recId).param("t", secret))
                 .andExpect(status().isOk())
@@ -125,7 +125,7 @@ class WatchClipsIntegrationTest {
                                 .formatted(recId, file)))
                 .andExpect(status().isNoContent());
 
-        // Also upload a clip (seg 2, later time)
+        // Also upload a clip (seg 2, later time) — server assigns the next number after the streamed one
         String start2 = "2026-06-19T11:00:30Z";
         String end2   = "2026-06-19T11:01:00Z";
         MockMultipartFile clip = new MockMultipartFile("file", "clip2.mp4", "video/mp4", CLIP_BYTES);
@@ -133,7 +133,7 @@ class WatchClipsIntegrationTest {
                         .file(clip)
                         .param("startTime", start2)
                         .param("endTime", end2)
-                        .param("segmentNumber", "2")
+                        .param("clipId", "clip-gap-1")
                         .header("Authorization", "Bearer " + deviceToken))
                 .andExpect(status().isCreated());
 
@@ -158,7 +158,7 @@ class WatchClipsIntegrationTest {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         // Upload creates an ENDED recording — the key post-stream case
         String secret = uploadClipAndGetSecret(recId, CLIP_BYTES,
-                "2026-06-19T09:00:00Z", "2026-06-19T09:01:00Z", 1);
+                "2026-06-19T09:00:00Z", "2026-06-19T09:01:00Z", "clip-1");
 
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.ENDED);
 
@@ -193,7 +193,7 @@ class WatchClipsIntegrationTest {
     void segmentStreamReturnsExactBytesInlineVideoMp4() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         String secret = uploadClipAndGetSecret(recId, CLIP_BYTES,
-                "2026-06-19T12:00:00Z", "2026-06-19T12:01:00Z", 1);
+                "2026-06-19T12:00:00Z", "2026-06-19T12:01:00Z", "clip-1");
 
         mvc.perform(get("/api/public/watch/{id}/segments/1", recId).param("t", secret))
                 .andExpect(status().isOk())
@@ -206,10 +206,11 @@ class WatchClipsIntegrationTest {
     void segmentStreamForUploadedClip() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         byte[] clipBytes = "uploaded-clip-content".getBytes();
+        // Server assigns segment number 1 (first segment in a fresh recording)
         String secret = uploadClipAndGetSecret(recId, clipBytes,
-                "2026-06-19T13:00:00Z", "2026-06-19T13:01:00Z", 3);
+                "2026-06-19T13:00:00Z", "2026-06-19T13:01:00Z", "clip-uploaded-1");
 
-        mvc.perform(get("/api/public/watch/{id}/segments/3", recId).param("t", secret))
+        mvc.perform(get("/api/public/watch/{id}/segments/1", recId).param("t", secret))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("video/mp4"))
                 .andExpect(content().bytes(clipBytes));
@@ -219,7 +220,7 @@ class WatchClipsIntegrationTest {
     void segmentStreamWrongTokenReturns403() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         uploadClipAndGetSecret(recId, CLIP_BYTES,
-                "2026-06-19T14:00:00Z", "2026-06-19T14:01:00Z", 1);
+                "2026-06-19T14:00:00Z", "2026-06-19T14:01:00Z", "clip-1");
 
         mvc.perform(get("/api/public/watch/{id}/segments/1", recId).param("t", "apv_wrong"))
                 .andExpect(status().isForbidden());
@@ -229,7 +230,7 @@ class WatchClipsIntegrationTest {
     void segmentStreamMissingTokenReturns403() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         uploadClipAndGetSecret(recId, CLIP_BYTES,
-                "2026-06-19T15:00:00Z", "2026-06-19T15:01:00Z", 1);
+                "2026-06-19T15:00:00Z", "2026-06-19T15:01:00Z", "clip-1");
 
         // Missing ?t= — Spring will reject with 400 (required param missing) before
         // reaching the handler; that is acceptable as it leaks no file bytes.
@@ -250,7 +251,7 @@ class WatchClipsIntegrationTest {
     void segmentStreamUnknownSegmentNumberReturns404() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         String secret = uploadClipAndGetSecret(recId, CLIP_BYTES,
-                "2026-06-19T16:00:00Z", "2026-06-19T16:01:00Z", 1);
+                "2026-06-19T16:00:00Z", "2026-06-19T16:01:00Z", "clip-1");
 
         mvc.perform(get("/api/public/watch/{id}/segments/99", recId).param("t", secret))
                 .andExpect(status().isNotFound());
@@ -260,7 +261,7 @@ class WatchClipsIntegrationTest {
     void segmentStreamWorksAfterRecordingEnded() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         String secret = uploadClipAndGetSecret(recId, CLIP_BYTES,
-                "2026-06-19T17:00:00Z", "2026-06-19T17:01:00Z", 1);
+                "2026-06-19T17:00:00Z", "2026-06-19T17:01:00Z", "clip-1");
 
         // Recording is ENDED (upload of a PENDING recording ends it)
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.ENDED);
