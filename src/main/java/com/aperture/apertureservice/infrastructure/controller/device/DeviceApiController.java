@@ -5,15 +5,18 @@ import com.aperture.apertureservice.domain.emergency.api.ListEmergencyContacts;
 import com.aperture.apertureservice.domain.recording.CancelResult;
 import com.aperture.apertureservice.domain.recording.EnsureResult;
 import com.aperture.apertureservice.domain.recording.Recording;
+import com.aperture.apertureservice.domain.recording.RecordingSegment;
 import com.aperture.apertureservice.domain.recording.WatchUrls;
 import com.aperture.apertureservice.domain.recording.api.AppendMetadataSamples;
 import com.aperture.apertureservice.domain.recording.api.CancelAlerts;
 import com.aperture.apertureservice.domain.recording.api.EndRecording;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
+import com.aperture.apertureservice.domain.recording.api.UploadClip;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
 import com.aperture.apertureservice.infrastructure.security.AuthenticatedDevice;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +25,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.time.Instant;
 import java.util.UUID;
 
 @RestController
@@ -37,18 +45,20 @@ public class DeviceApiController {
     private final GetAlertConfiguration getAlertConfig;
     private final ListEmergencyContacts listContacts;
     private final CancelAlerts cancelAlertsPort;
+    private final UploadClip uploadClip;
     private final AppProperties props;
 
     public DeviceApiController(EnsureRecording ensureRecording, EndRecording endRecording,
                                AppendMetadataSamples appendSamples, GetAlertConfiguration getAlertConfig,
                                ListEmergencyContacts listContacts, CancelAlerts cancelAlertsPort,
-                               AppProperties props) {
+                               UploadClip uploadClip, AppProperties props) {
         this.ensureRecording = ensureRecording;
         this.endRecording = endRecording;
         this.appendSamples = appendSamples;
         this.getAlertConfig = getAlertConfig;
         this.listContacts = listContacts;
         this.cancelAlertsPort = cancelAlertsPort;
+        this.uploadClip = uploadClip;
         this.props = props;
     }
 
@@ -103,5 +113,28 @@ public class DeviceApiController {
         return new DeviceApiDtos.DeviceAlertConfigResponse(
                 getAlertConfig.get(userId).countdownDurationSeconds(),
                 !listContacts.list(userId).isEmpty());
+    }
+
+    @PostMapping(value = "/recordings/{id}/clips", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public DeviceApiDtos.ClipUploadResponse uploadClip(
+            Authentication auth,
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("startTime") Instant startTime,
+            @RequestParam("endTime") Instant endTime,
+            @RequestParam(value = "quality", required = false) String quality,
+            @RequestParam(value = "segmentNumber", required = false) Integer segmentNumber)
+            throws IOException {
+        RecordingSegment seg = uploadClip.upload(id, device(auth).userId(),
+                file.getInputStream(), sanitizeFilename(file.getOriginalFilename()),
+                file.getSize(), startTime, endTime, quality, segmentNumber);
+        return new DeviceApiDtos.ClipUploadResponse(seg.id(), seg.segmentNumber(),
+                seg.source().name(), seg.quality(), seg.startTime(), seg.endTime(), seg.sizeBytes());
+    }
+
+    private static String sanitizeFilename(String original) {
+        if (original == null || original.isBlank()) return "clip.mp4";
+        return Path.of(original).getFileName().toString();
     }
 }

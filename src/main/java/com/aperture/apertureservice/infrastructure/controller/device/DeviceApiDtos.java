@@ -28,4 +28,8 @@ public final class DeviceApiDtos {
     public record DeviceAlertConfigResponse(int countdownDurationSeconds, boolean hasContacts) {}
 
     public record CancelAlertsResponse(boolean cancelled, boolean alertsAlreadyDispatched) {}
+
+    public record ClipUploadResponse(long segmentId, int segmentNumber, String source,
+                                     String quality, Instant startTime, Instant endTime,
+                                     long sizeBytes) {}
 }

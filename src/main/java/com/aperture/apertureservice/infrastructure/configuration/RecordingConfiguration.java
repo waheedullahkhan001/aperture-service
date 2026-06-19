@@ -2,6 +2,8 @@ package com.aperture.apertureservice.infrastructure.configuration;
 
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
 import com.aperture.apertureservice.domain.account.spi.Users;
+import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
+import com.aperture.apertureservice.domain.recording.service.UploadClipService;
 import com.aperture.apertureservice.domain.recording.service.LibraryService;
 import com.aperture.apertureservice.domain.recording.service.RecordingService;
 import com.aperture.apertureservice.domain.recording.service.StreamAuthService;
@@ -49,5 +51,11 @@ public class RecordingConfiguration {
     LibraryService libraryService(Recordings recordings, RecordingSegments segments,
                                   MetadataSamples samples, SegmentFileStore files) {
         return new LibraryService(recordings, segments, samples, files);
+    }
+
+    @Bean
+    UploadClipService uploadClipService(EnsureRecording ensureRecording, Recordings recordings,
+                                        RecordingSegments segments, SegmentFileStore files) {
+        return new UploadClipService(ensureRecording, recordings, segments, files);
     }
 }

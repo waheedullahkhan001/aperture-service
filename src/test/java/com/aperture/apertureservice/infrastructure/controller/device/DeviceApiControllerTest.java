@@ -13,6 +13,7 @@ import com.aperture.apertureservice.domain.recording.api.AppendMetadataSamples;
 import com.aperture.apertureservice.domain.recording.api.CancelAlerts;
 import com.aperture.apertureservice.domain.recording.api.EndRecording;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
+import com.aperture.apertureservice.domain.recording.api.UploadClip;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
 import com.aperture.apertureservice.infrastructure.security.AuthenticatedDevice;
 import org.junit.jupiter.api.Test;
@@ -67,6 +68,7 @@ class DeviceApiControllerTest {
     @MockitoBean GetAlertConfiguration getAlertConfig;
     @MockitoBean ListEmergencyContacts listContacts;
     @MockitoBean CancelAlerts cancelAlerts;
+    @MockitoBean UploadClip uploadClip;
 
     private final UUID userId = UUID.randomUUID();
     private final UUID deviceId = UUID.randomUUID();
