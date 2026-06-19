@@ -50,7 +50,7 @@ public class RecordingService implements EnsureRecording, MarkStreaming, EndReco
                 clientStartedAt != null ? clientStartedAt : now, null,
                 tokens.token("apv_"),
                 alertPolicy.activeCountdownFor(userId).map(now::plus).orElse(null),
-                null);
+                null, false);
         if (recordings.insertIfAbsent(candidate)) {
             return new EnsureResult(candidate, true);
         }

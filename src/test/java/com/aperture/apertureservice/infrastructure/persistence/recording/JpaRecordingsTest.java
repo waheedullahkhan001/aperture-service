@@ -48,7 +48,7 @@ class JpaRecordingsTest {
     private Recording recording(UUID userId, RecordingStatus status, Instant startedAt,
                                 Instant countdownEndsAt, Instant dispatchedAt) {
         return new Recording(UuidCreator.getTimeOrderedEpoch(), userId, status, startedAt, null,
-                "apv_" + UUID.randomUUID(), countdownEndsAt, dispatchedAt);
+                "apv_" + UUID.randomUUID(), countdownEndsAt, dispatchedAt, false);
     }
 
     @Test

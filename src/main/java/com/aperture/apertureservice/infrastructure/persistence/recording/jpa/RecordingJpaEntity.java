@@ -41,6 +41,9 @@ class RecordingJpaEntity {
     @Column(name = "alerts_dispatched_at")
     Instant alertsDispatchedAt;
 
+    @Column(name = "view_revoked", nullable = false)
+    boolean viewRevoked;
+
     protected RecordingJpaEntity() {}
 
     static RecordingJpaEntity from(Recording r) {
@@ -53,11 +56,12 @@ class RecordingJpaEntity {
         e.viewSecret = r.viewSecret();
         e.countdownEndsAt = r.countdownEndsAt();
         e.alertsDispatchedAt = r.alertsDispatchedAt();
+        e.viewRevoked = r.viewRevoked();
         return e;
     }
 
     Recording toDomain() {
         return new Recording(id, userId, RecordingStatus.valueOf(status), startedAt, endedAt,
-                viewSecret, countdownEndsAt, alertsDispatchedAt);
+                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
     }
 }

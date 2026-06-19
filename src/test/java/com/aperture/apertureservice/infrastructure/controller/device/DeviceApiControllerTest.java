@@ -92,7 +92,7 @@ class DeviceApiControllerTest {
     void ensureReturns201OnCreateAnd200OnExisting() throws Exception {
         Instant t = Instant.parse("2026-06-07T12:00:00Z");
         Recording r = new Recording(recId, userId, RecordingStatus.PENDING, t, null, "apv_s",
-                t.plusSeconds(30), null);
+                t.plusSeconds(30), null, false);
         when(ensureRecording.ensure(recId, userId, t)).thenReturn(new EnsureResult(r, true));
 
         mvc.perform(put("/api/v1/device/recordings/" + recId).principal(asDevice())
@@ -115,7 +115,7 @@ class DeviceApiControllerTest {
     @Test
     void ensureWithEmptyBodyWorks() throws Exception {
         Recording r = new Recording(recId, userId, RecordingStatus.PENDING, Instant.now(), null, "apv_s",
-                null, null);
+                null, null, false);
         when(ensureRecording.ensure(recId, userId, null)).thenReturn(new EnsureResult(r, true));
         mvc.perform(put("/api/v1/device/recordings/" + recId).principal(asDevice()))
                 .andExpect(status().isCreated());

@@ -95,6 +95,9 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
     private Recording verifiedRow(UUID recordingId, String viewSecret) {
         Recording r = recordings.byId(recordingId)
                 .orElseThrow(() -> new NotFound("RECORDING_NOT_FOUND", "Recording not found"));
+        if (r.viewRevoked()) {
+            throw new Forbidden("VIEW_REVOKED", "This watch link has been revoked");
+        }
         byte[] expected = r.viewSecret().getBytes(StandardCharsets.UTF_8);
         byte[] presented = (viewSecret == null ? "" : viewSecret).getBytes(StandardCharsets.UTF_8);
         if (!MessageDigest.isEqual(expected, presented)) {

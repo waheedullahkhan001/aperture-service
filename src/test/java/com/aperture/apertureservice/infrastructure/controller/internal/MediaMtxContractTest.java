@@ -107,7 +107,7 @@ class MediaMtxContractTest {
                 .andExpect(status().isNoContent());
         // foreign recording id -> deny 403
         Recording foreign = new Recording(UuidCreator.getTimeOrderedEpoch(), UUID.randomUUID(),
-                RecordingStatus.PENDING, Instant.now(), null, "apv_f_" + UUID.randomUUID(), null, null);
+                RecordingStatus.PENDING, Instant.now(), null, "apv_f_" + UUID.randomUUID(), null, null, false);
         recordings.insertIfAbsent(foreign);
         mvc.perform(post("/internal/streams/auth").header("Authorization", SECRET)
                         .contentType("application/json")

@@ -83,7 +83,7 @@ class RecordingsControllerTest {
     }
 
     private Recording recording() {
-        return new Recording(recId, userId, RecordingStatus.ENDED, t, t.plusSeconds(60), "apv_s", null, null);
+        return new Recording(recId, userId, RecordingStatus.ENDED, t, t.plusSeconds(60), "apv_s", null, null, false);
     }
 
     @Test

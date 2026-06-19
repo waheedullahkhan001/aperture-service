@@ -15,10 +15,10 @@ public final class RecordingDtos {
     private RecordingDtos() {}
 
     public record RecordingResponse(UUID id, String status, Instant startedAt, Instant endedAt,
-                                    Instant countdownEndsAt, Instant alertsDispatchedAt) {
+                                    Instant countdownEndsAt, Instant alertsDispatchedAt, boolean viewRevoked) {
         public static RecordingResponse from(Recording r) {
             return new RecordingResponse(r.id(), r.status().name(), r.startedAt(), r.endedAt(),
-                    r.countdownEndsAt(), r.alertsDispatchedAt());
+                    r.countdownEndsAt(), r.alertsDispatchedAt(), r.viewRevoked());
         }
     }
 

@@ -172,7 +172,7 @@ class ClipUploadIntegrationTest {
         UUID otherUserId = UUID.randomUUID();
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         Recording foreign = new Recording(recId, otherUserId, RecordingStatus.PENDING,
-                Instant.now(), null, "apv_foreign_" + UUID.randomUUID(), null, null);
+                Instant.now(), null, "apv_foreign_" + UUID.randomUUID(), null, null, false);
         recordings.insertIfAbsent(foreign);
 
         MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "clip.mp4",
@@ -187,7 +187,7 @@ class ClipUploadIntegrationTest {
         // lifecycle (publish-end) ends those. (Regression: previously any upload ended a live one.)
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         Recording liveRec = new Recording(recId, userId, RecordingStatus.RECORDING,
-                Instant.now(), null, "apv_live_" + UUID.randomUUID(), null, null);
+                Instant.now(), null, "apv_live_" + UUID.randomUUID(), null, null, false);
         recordings.insertIfAbsent(liveRec);
 
         MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "gap.mp4",
