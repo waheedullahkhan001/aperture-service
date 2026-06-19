@@ -15,6 +15,7 @@ import com.aperture.apertureservice.domain.recording.spi.stubs.InMemoryRecording
 import com.aperture.apertureservice.domain.recording.spi.stubs.InMemorySegmentFileStore;
 import com.aperture.apertureservice.ddd.PageOf;
 import com.aperture.apertureservice.domain.recording.Recording;
+import com.aperture.apertureservice.domain.recording.SegmentSource;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.Test;
 
@@ -60,7 +61,7 @@ class LibraryServiceTest {
     @Test
     void detailIncludesSegmentsAndSamplesAndChecksOwnership() {
         UUID id = seedRecording();
-        segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0.plusSeconds(30), 3, true));
+        segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0.plusSeconds(30), 3, true, SegmentSource.STREAMED, null));
         samples.saveAll(List.of(new MetadataSample(null, id, null, null, T0, T0, null)));
 
         RecordingDetail detail = service.get(userId, id);
@@ -73,7 +74,7 @@ class LibraryServiceTest {
     void downloadOpensOwnedSegmentFile() throws Exception {
         UUID id = seedRecording();
         files.put("/p/a.mp4", new byte[]{9, 9});
-        segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0, 2, true));
+        segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0, 2, true, SegmentSource.STREAMED, null));
 
         SegmentDownload dl = service.download(userId, id, 1);
         assertThat(dl.stream().readAllBytes()).containsExactly(9, 9);
@@ -86,7 +87,7 @@ class LibraryServiceTest {
     void deleteRemovesFilesAndRows() {
         UUID id = seedRecording();
         files.put("/p/a.mp4", new byte[]{1});
-        segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0, 1, true));
+        segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0, 1, true, SegmentSource.STREAMED, null));
         samples.saveAll(List.of(new MetadataSample(null, id, null, null, T0, T0, null)));
 
         service.delete(userId, id);

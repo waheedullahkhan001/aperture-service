@@ -2,6 +2,7 @@ package com.aperture.apertureservice.domain.recording.spi.stubs;
 
 import com.aperture.apertureservice.ddd.Stub;
 import com.aperture.apertureservice.domain.recording.RecordingSegment;
+import com.aperture.apertureservice.domain.recording.SegmentSource;
 import com.aperture.apertureservice.domain.recording.spi.RecordingSegments;
 
 import java.util.Comparator;
@@ -26,7 +27,8 @@ public class InMemoryRecordingSegments implements RecordingSegments {
 
     @Override public void save(RecordingSegment s) {
         all.add(new RecordingSegment(seq.incrementAndGet(), s.recordingId(), s.segmentNumber(),
-                s.filePath(), s.startTime(), s.endTime(), s.sizeBytes(), s.uploaded()));
+                s.filePath(), s.startTime(), s.endTime(), s.sizeBytes(), s.uploaded(),
+                s.source() != null ? s.source() : SegmentSource.STREAMED, s.quality()));
     }
 
     @Override public List<RecordingSegment> byRecording(UUID recordingId) {

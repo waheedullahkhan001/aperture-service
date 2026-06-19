@@ -7,6 +7,7 @@ import com.aperture.apertureservice.ddd.NotFound;
 import com.aperture.apertureservice.domain.recording.MetadataSample;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.RecordingSegment;
+import com.aperture.apertureservice.domain.recording.SegmentSource;
 import com.aperture.apertureservice.domain.recording.api.AppendMetadataSamples;
 import com.aperture.apertureservice.domain.recording.api.RecordSegmentNotification;
 import com.aperture.apertureservice.domain.recording.spi.MetadataSamples;
@@ -71,6 +72,8 @@ public class TelemetryService implements AppendMetadataSamples, RecordSegmentNot
         Instant end = clock.instant();
         Instant start = end.minusMillis(Math.round(Math.max(0, durationSeconds) * 1000));
         segments.save(new RecordingSegment(null, recordingId, segments.nextNumber(recordingId),
-                segmentPath, start, end, files.sizeOf(segmentPath), true));
+                segmentPath, start, end, files.sizeOf(segmentPath), true,
+                // source=STREAMED (origin); uploaded=true means file available — separate concerns
+                SegmentSource.STREAMED, null));
     }
 }

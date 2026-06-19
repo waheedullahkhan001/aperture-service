@@ -22,9 +22,11 @@ public final class RecordingDtos {
         }
     }
 
-    public record SegmentResponse(int segmentNumber, Instant startTime, Instant endTime, long sizeBytes) {
+    public record SegmentResponse(int segmentNumber, Instant startTime, Instant endTime, long sizeBytes,
+                                  String source, String quality) {
         public static SegmentResponse from(RecordingSegment s) {
-            return new SegmentResponse(s.segmentNumber(), s.startTime(), s.endTime(), s.sizeBytes());
+            return new SegmentResponse(s.segmentNumber(), s.startTime(), s.endTime(), s.sizeBytes(),
+                    s.source() != null ? s.source().name() : "STREAMED", s.quality());
         }
     }
 

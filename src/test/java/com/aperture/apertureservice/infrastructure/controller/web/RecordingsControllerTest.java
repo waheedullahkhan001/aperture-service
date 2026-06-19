@@ -6,6 +6,7 @@ import com.aperture.apertureservice.domain.recording.RecordingDetail;
 import com.aperture.apertureservice.domain.recording.RecordingSegment;
 import com.aperture.apertureservice.domain.recording.RecordingStatus;
 import com.aperture.apertureservice.domain.recording.SegmentDownload;
+import com.aperture.apertureservice.domain.recording.SegmentSource;
 import com.aperture.apertureservice.domain.recording.WatchView;
 import com.aperture.apertureservice.domain.recording.api.DeleteRecording;
 import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
@@ -96,7 +97,7 @@ class RecordingsControllerTest {
     @Test
     void detailDownloadDelete() throws Exception {
         when(getRecording.get(userId, recId)).thenReturn(new RecordingDetail(recording(),
-                List.of(new RecordingSegment(1L, recId, 1, "/p", t, t.plusSeconds(30), 3, true)),
+                List.of(new RecordingSegment(1L, recId, 1, "/p", t, t.plusSeconds(30), 3, true, SegmentSource.STREAMED, null)),
                 List.of()));
         when(downloadSegment.download(userId, recId, 1)).thenReturn(
                 new SegmentDownload(new ByteArrayInputStream(new byte[]{7, 7}), 2, recId + "-1.mp4"));

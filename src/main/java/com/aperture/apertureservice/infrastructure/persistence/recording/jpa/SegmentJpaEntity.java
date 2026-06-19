@@ -1,6 +1,7 @@
 package com.aperture.apertureservice.infrastructure.persistence.recording.jpa;
 
 import com.aperture.apertureservice.domain.recording.RecordingSegment;
+import com.aperture.apertureservice.domain.recording.SegmentSource;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -42,6 +43,12 @@ class SegmentJpaEntity {
     @Column(nullable = false)
     boolean uploaded;
 
+    @Column(name = "source", nullable = false, length = 16)
+    String source;
+
+    @Column(name = "quality")
+    String quality;
+
     protected SegmentJpaEntity() {}
 
     static SegmentJpaEntity from(RecordingSegment s) {
@@ -54,11 +61,15 @@ class SegmentJpaEntity {
         e.endTime = s.endTime();
         e.sizeBytes = s.sizeBytes();
         e.uploaded = s.uploaded();
+        e.source = s.source() != null ? s.source().name() : SegmentSource.STREAMED.name();
+        e.quality = s.quality();
         return e;
     }
 
     RecordingSegment toDomain() {
         return new RecordingSegment(id, recordingId, segmentNumber, filePath, startTime, endTime,
-                sizeBytes, uploaded);
+                sizeBytes, uploaded,
+                source != null ? SegmentSource.valueOf(source) : SegmentSource.STREAMED,
+                quality);
     }
 }
