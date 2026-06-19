@@ -12,5 +12,6 @@ public interface RecordingSegments {
     void save(RecordingSegment segment);
     List<RecordingSegment> byRecording(UUID recordingId);
     Optional<RecordingSegment> byNumber(UUID recordingId, int segmentNumber);
+    Optional<RecordingSegment> byClientClipId(UUID recordingId, String clientClipId);
     void deleteFor(UUID recordingId);
 }

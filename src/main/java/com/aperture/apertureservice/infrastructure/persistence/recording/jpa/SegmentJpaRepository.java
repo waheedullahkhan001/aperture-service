@@ -18,5 +18,7 @@ interface SegmentJpaRepository extends JpaRepository<SegmentJpaEntity, Long> {
 
     Optional<SegmentJpaEntity> findByRecordingIdAndSegmentNumber(UUID recordingId, int segmentNumber);
 
+    Optional<SegmentJpaEntity> findByRecordingIdAndClientClipId(UUID recordingId, String clientClipId);
+
     void deleteByRecordingId(UUID recordingId);
 }

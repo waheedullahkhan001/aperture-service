@@ -74,6 +74,6 @@ public class TelemetryService implements AppendMetadataSamples, RecordSegmentNot
         segments.save(new RecordingSegment(null, recordingId, segments.nextNumber(recordingId),
                 segmentPath, start, end, files.sizeOf(segmentPath), true,
                 // source=STREAMED (origin); uploaded=true means file available — separate concerns
-                SegmentSource.STREAMED, null));
+                SegmentSource.STREAMED, null, null));
     }
 }

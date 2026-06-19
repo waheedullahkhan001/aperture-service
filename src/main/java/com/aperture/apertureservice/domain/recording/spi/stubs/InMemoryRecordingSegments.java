@@ -28,7 +28,8 @@ public class InMemoryRecordingSegments implements RecordingSegments {
     @Override public void save(RecordingSegment s) {
         all.add(new RecordingSegment(seq.incrementAndGet(), s.recordingId(), s.segmentNumber(),
                 s.filePath(), s.startTime(), s.endTime(), s.sizeBytes(), s.uploaded(),
-                s.source() != null ? s.source() : SegmentSource.STREAMED, s.quality()));
+                s.source() != null ? s.source() : SegmentSource.STREAMED, s.quality(),
+                s.clientClipId()));
     }
 
     @Override public List<RecordingSegment> byRecording(UUID recordingId) {
@@ -38,6 +39,12 @@ public class InMemoryRecordingSegments implements RecordingSegments {
 
     @Override public Optional<RecordingSegment> byNumber(UUID recordingId, int segmentNumber) {
         return byRecording(recordingId).stream().filter(s -> s.segmentNumber() == segmentNumber).findFirst();
+    }
+
+    @Override public Optional<RecordingSegment> byClientClipId(UUID recordingId, String clientClipId) {
+        return all.stream()
+                .filter(s -> s.recordingId().equals(recordingId) && clientClipId.equals(s.clientClipId()))
+                .findFirst();
     }
 
     @Override public void deleteFor(UUID recordingId) {

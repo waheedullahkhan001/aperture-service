@@ -49,6 +49,9 @@ class SegmentJpaEntity {
     @Column(name = "quality")
     String quality;
 
+    @Column(name = "client_clip_id")
+    String clientClipId;
+
     protected SegmentJpaEntity() {}
 
     static SegmentJpaEntity from(RecordingSegment s) {
@@ -63,6 +66,7 @@ class SegmentJpaEntity {
         e.uploaded = s.uploaded();
         e.source = s.source() != null ? s.source().name() : SegmentSource.STREAMED.name();
         e.quality = s.quality();
+        e.clientClipId = s.clientClipId();
         return e;
     }
 
@@ -70,6 +74,6 @@ class SegmentJpaEntity {
         return new RecordingSegment(id, recordingId, segmentNumber, filePath, startTime, endTime,
                 sizeBytes, uploaded,
                 source != null ? SegmentSource.valueOf(source) : SegmentSource.STREAMED,
-                quality);
+                quality, clientClipId);
     }
 }

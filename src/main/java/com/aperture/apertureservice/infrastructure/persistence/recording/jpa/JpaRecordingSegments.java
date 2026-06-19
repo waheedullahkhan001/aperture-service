@@ -46,6 +46,12 @@ public class JpaRecordingSegments implements RecordingSegments {
     }
 
     @Override
+    public Optional<RecordingSegment> byClientClipId(UUID recordingId, String clientClipId) {
+        return repo.findByRecordingIdAndClientClipId(recordingId, clientClipId)
+                .map(SegmentJpaEntity::toDomain);
+    }
+
+    @Override
     @Transactional
     public void deleteFor(UUID recordingId) {
         repo.deleteByRecordingId(recordingId);

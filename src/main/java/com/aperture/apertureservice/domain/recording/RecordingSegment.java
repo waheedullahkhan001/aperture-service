@@ -5,4 +5,4 @@ import java.util.UUID;
 
 public record RecordingSegment(Long id, UUID recordingId, int segmentNumber, String filePath,
                                Instant startTime, Instant endTime, long sizeBytes, boolean uploaded,
-                               SegmentSource source, String quality) {}
+                               SegmentSource source, String quality, String clientClipId) {}
