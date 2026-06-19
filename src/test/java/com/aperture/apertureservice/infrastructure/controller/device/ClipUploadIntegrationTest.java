@@ -130,6 +130,25 @@ class ClipUploadIntegrationTest {
     }
 
     @Test
+    void uploadAcceptsFractionalSecondTimestamps() throws Exception {
+        // Android sends Instant.toString(), which carries fractional seconds when present
+        // (e.g. ...:00.123Z). Confirm the @RequestParam Instant parser accepts them and
+        // round-trips. NOTE: storage is Postgres microsecond precision, so values are kept to
+        // 6 fractional digits — fine for Android's millisecond-precision Instant; sub-micro
+        // (nanosecond) input would be truncated.
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+        String start = "2026-06-19T10:00:00.123Z";
+        String end   = "2026-06-19T10:00:30.456Z";
+
+        MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "frac.mp4", start, end, 1);
+        assertThat(result.getResponse().getStatus()).isEqualTo(201);
+
+        RecordingSegment seg = segments.byRecording(recId).get(0);
+        assertThat(seg.startTime()).isEqualTo(Instant.parse(start));
+        assertThat(seg.endTime()).isEqualTo(Instant.parse(end));
+    }
+
+    @Test
     void idempotentReuploadDoesNotDuplicate() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         String start = "2026-06-19T11:00:00Z";
