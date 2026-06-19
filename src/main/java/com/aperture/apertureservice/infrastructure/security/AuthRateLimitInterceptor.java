@@ -20,8 +20,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Per-client-IP token-bucket rate limiter for the abuse-prone unauthenticated auth endpoints.
  *
- * <p>Client IP is resolved from the first value in {@code X-Forwarded-For} (set by nginx),
- * falling back to {@code request.getRemoteAddr()} for direct/dev/test traffic.
+ * <p>Client IP is resolved from the LAST (rightmost) value in {@code X-Forwarded-For} — the
+ * real peer that the single trusted proxy (nginx) appends; leftmost values are client-spoofable.
+ * Falls back to {@code request.getRemoteAddr()} for direct/dev/test traffic.
  *
  * <p>Implemented as a Spring MVC {@link HandlerInterceptor} (registered only for the target
  * paths) rather than a servlet {@code Filter} to avoid the Boot 4 servlet-filter auto-
@@ -90,9 +91,14 @@ public class AuthRateLimitInterceptor implements HandlerInterceptor {
     private static String resolveClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            // X-Forwarded-For: client, proxy1, proxy2 — take the first (leftmost) entry
-            int comma = xff.indexOf(',');
-            return (comma == -1 ? xff : xff.substring(0, comma)).strip();
+            // Take the LAST (rightmost) entry. The backend is loopback-only behind exactly one
+            // trusted proxy (nginx), which APPENDS the real peer to whatever the client sent
+            // ("$proxy_add_x_forwarded_for"). The leftmost values are client-supplied and
+            // spoofable — using them would let an attacker rotate a fake X-Forwarded-For per
+            // request and bypass the limit entirely. The rightmost entry is nginx's observed
+            // client and cannot be forged through the proxy.
+            int comma = xff.lastIndexOf(',');
+            return (comma == -1 ? xff : xff.substring(comma + 1)).strip();
         }
         return request.getRemoteAddr();
     }

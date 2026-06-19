@@ -108,4 +108,26 @@ class AuthRateLimitTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
     }
+
+    @Test
+    void spoofedLeftmostForwardedForCannotBypassLimit() throws Exception {
+        // nginx appends the real peer as the LAST X-Forwarded-For entry. Here the client
+        // rotates a spoofed leftmost value each request while the real (rightmost) IP stays
+        // constant — the limiter must key on the rightmost, so the limit still trips.
+        // (With the old leftmost logic each request would land in a fresh bucket and never 429.)
+        String realIp = "10.3.0.7";
+        String body   = """
+                {"email":"spoof@example.com","password":"wrong!!!1"}""";
+
+        mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                        .header("X-Forwarded-For", "1.1.1.1, " + realIp).content(body))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                        .header("X-Forwarded-For", "2.2.2.2, " + realIp).content(body))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/login").contentType("application/json")
+                        .header("X-Forwarded-For", "3.3.3.3, " + realIp).content(body))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+    }
 }
