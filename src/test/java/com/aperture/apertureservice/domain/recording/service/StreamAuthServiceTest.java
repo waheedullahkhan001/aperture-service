@@ -94,7 +94,7 @@ class StreamAuthServiceTest {
     void watchViewAssemblesOwnerUrlsAndLatestSample() {
         Recording r = recordingService.ensure(recId, userId, null).recording();
         samples.saveAll(List.of(new MetadataSample(null, recId, new BigDecimal("33.684400"),
-                new BigDecimal("73.047900"), T0, T0, "Pixel")));
+                new BigDecimal("73.047900"), T0, T0, "Pixel", null, null, null, null, null)));
 
         WatchView view = service.watch(recId, r.viewSecret());
         assertThat(view.ownerName()).isEqualTo("Owner");

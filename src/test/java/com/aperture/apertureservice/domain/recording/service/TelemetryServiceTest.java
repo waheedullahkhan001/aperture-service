@@ -51,8 +51,8 @@ class TelemetryServiceTest {
     void appendStoresSamplesWithServerTimeAndChecksOwnership() {
         int n = service.append(recId, userId, List.of(
                 new AppendMetadataSamples.NewSample(new BigDecimal("1.5"), new BigDecimal("2.5"),
-                        T0.minusSeconds(30), "Pixel"),
-                new AppendMetadataSamples.NewSample(null, null, T0, null)));
+                        T0.minusSeconds(30), "Pixel", null, null, null, null, null),
+                new AppendMetadataSamples.NewSample(null, null, T0, null, null, null, null, null, null)));
         assertThat(n).isEqualTo(2);
         MetadataSample latest = samples.latest(recId).orElseThrow();
         assertThat(latest.serverReceivedAt()).isEqualTo(T0);
@@ -67,7 +67,7 @@ class TelemetryServiceTest {
     @Test
     void appendCapsBatchSize() {
         List<AppendMetadataSamples.NewSample> tooMany = IntStream.range(0, 501)
-                .mapToObj(i -> new AppendMetadataSamples.NewSample(null, null, T0, null)).toList();
+                .mapToObj(i -> new AppendMetadataSamples.NewSample(null, null, T0, null, null, null, null, null, null)).toList();
         assertThatThrownBy(() -> service.append(recId, userId, tooMany))
                 .isInstanceOf(BadRequest.class).hasFieldOrPropertyWithValue("code", "BATCH_TOO_LARGE");
     }

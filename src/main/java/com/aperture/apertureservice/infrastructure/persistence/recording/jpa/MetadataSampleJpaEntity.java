@@ -40,6 +40,21 @@ class MetadataSampleJpaEntity {
     @Column(name = "device_info")
     String deviceInfo;
 
+    @Column(name = "horizontal_accuracy_m")
+    Double horizontalAccuracyM;
+
+    @Column(name = "speed_mps")
+    Double speedMps;
+
+    @Column(name = "bearing_deg")
+    Double bearingDeg;
+
+    @Column(name = "altitude_m")
+    Double altitudeM;
+
+    @Column(name = "battery_percent")
+    Integer batteryPercent;
+
     protected MetadataSampleJpaEntity() {}
 
     static MetadataSampleJpaEntity from(MetadataSample s) {
@@ -51,11 +66,17 @@ class MetadataSampleJpaEntity {
         e.clientTimestamp = s.clientTimestamp();
         e.serverReceivedAt = s.serverReceivedAt();
         e.deviceInfo = s.deviceInfo();
+        e.horizontalAccuracyM = s.horizontalAccuracyM();
+        e.speedMps = s.speedMps();
+        e.bearingDeg = s.bearingDeg();
+        e.altitudeM = s.altitudeM();
+        e.batteryPercent = s.batteryPercent();
         return e;
     }
 
     MetadataSample toDomain() {
         return new MetadataSample(id, recordingId, latitude, longitude, clientTimestamp,
-                serverReceivedAt, deviceInfo);
+                serverReceivedAt, deviceInfo, horizontalAccuracyM, speedMps, bearingDeg,
+                altitudeM, batteryPercent);
     }
 }

@@ -62,7 +62,7 @@ class LibraryServiceTest {
     void detailIncludesSegmentsAndSamplesAndChecksOwnership() {
         UUID id = seedRecording();
         segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0.plusSeconds(30), 3, true, SegmentSource.STREAMED, null, null));
-        samples.saveAll(List.of(new MetadataSample(null, id, null, null, T0, T0, null)));
+        samples.saveAll(List.of(new MetadataSample(null, id, null, null, T0, T0, null, null, null, null, null, null)));
 
         RecordingDetail detail = service.get(userId, id);
         assertThat(detail.segments()).hasSize(1);
@@ -88,7 +88,7 @@ class LibraryServiceTest {
         UUID id = seedRecording();
         files.put("/p/a.mp4", new byte[]{1});
         segments.save(new RecordingSegment(null, id, 1, "/p/a.mp4", T0, T0, 1, true, SegmentSource.STREAMED, null, null));
-        samples.saveAll(List.of(new MetadataSample(null, id, null, null, T0, T0, null)));
+        samples.saveAll(List.of(new MetadataSample(null, id, null, null, T0, T0, null, null, null, null, null, null)));
 
         service.delete(userId, id);
         assertThat(files.exists("/p/a.mp4")).isFalse();

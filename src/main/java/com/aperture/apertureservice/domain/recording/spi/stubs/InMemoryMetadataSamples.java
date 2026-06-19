@@ -18,7 +18,8 @@ public class InMemoryMetadataSamples implements MetadataSamples {
 
     @Override public void saveAll(List<MetadataSample> samples) {
         samples.forEach(s -> all.add(new MetadataSample(seq.incrementAndGet(), s.recordingId(),
-                s.latitude(), s.longitude(), s.clientTimestamp(), s.serverReceivedAt(), s.deviceInfo())));
+                s.latitude(), s.longitude(), s.clientTimestamp(), s.serverReceivedAt(), s.deviceInfo(),
+                s.horizontalAccuracyM(), s.speedMps(), s.bearingDeg(), s.altitudeM(), s.batteryPercent())));
     }
 
     @Override public Optional<MetadataSample> latest(UUID recordingId) {

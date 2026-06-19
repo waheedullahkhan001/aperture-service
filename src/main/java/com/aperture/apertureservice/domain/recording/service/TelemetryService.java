@@ -55,7 +55,8 @@ public class TelemetryService implements AppendMetadataSamples, RecordSegmentNot
         Instant now = clock.instant();
         samples.saveAll(newSamples.stream()
                 .map(s -> new MetadataSample(null, recordingId, s.latitude(), s.longitude(),
-                        s.clientTimestamp() != null ? s.clientTimestamp() : now, now, s.deviceInfo()))
+                        s.clientTimestamp() != null ? s.clientTimestamp() : now, now, s.deviceInfo(),
+                        s.horizontalAccuracyM(), s.speedMps(), s.bearingDeg(), s.altitudeM(), s.batteryPercent()))
                 .toList());
         return newSamples.size();
     }
