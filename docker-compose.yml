@@ -103,6 +103,10 @@ services:
       CERTBOT_EMAIL: ${CERTBOT_EMAIL}
       # set STAGING=1 in .env while testing to avoid Let's Encrypt rate limits
       STAGING: ${CERTBOT_STAGING:-0}
+      # local dev only: NGINX_USE_LOCAL_CA=1 makes jonasal self-sign instead of
+      # contacting Let's Encrypt (which can't issue for "localhost"). Default 0 =
+      # prod uses real Let's Encrypt. Set =1 in the local .env, never in prod.
+      USE_LOCAL_CA: ${NGINX_USE_LOCAL_CA:-0}
     ports:
       - "80:80"
       - "443:443"
