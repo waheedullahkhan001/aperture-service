@@ -139,7 +139,8 @@ class RecordingsControllerTest {
     void watchIsPublicWithToken() throws Exception {
         when(getWatchView.watch(recId, "apv_s")).thenReturn(new WatchView("Owner", t,
                 RecordingStatus.RECORDING,
-                Optional.of(new MetadataSample(1L, recId, new BigDecimal("1.5"), new BigDecimal("2.5"), t, t, "Pixel")),
+                Optional.of(new MetadataSample(1L, recId, new BigDecimal("1.5"), new BigDecimal("2.5"), t, t, "Pixel",
+                        null, null, null, null, null)),
                 "http://hls", "http://whep", List.of()));
         mvc.perform(get("/api/public/watch/" + recId + "?t=apv_s"))
                 .andExpect(status().isOk())

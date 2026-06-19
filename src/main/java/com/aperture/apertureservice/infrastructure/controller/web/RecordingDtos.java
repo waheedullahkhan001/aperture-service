@@ -31,9 +31,11 @@ public final class RecordingDtos {
     }
 
     public record SampleResponse(BigDecimal latitude, BigDecimal longitude, Instant clientTimestamp,
-                                 String deviceInfo) {
+                                 String deviceInfo, Double horizontalAccuracyM, Double speedMps,
+                                 Double bearingDeg, Double altitudeM, Integer batteryPercent) {
         public static SampleResponse from(MetadataSample s) {
-            return new SampleResponse(s.latitude(), s.longitude(), s.clientTimestamp(), s.deviceInfo());
+            return new SampleResponse(s.latitude(), s.longitude(), s.clientTimestamp(), s.deviceInfo(),
+                    s.horizontalAccuracyM(), s.speedMps(), s.bearingDeg(), s.altitudeM(), s.batteryPercent());
         }
     }
 

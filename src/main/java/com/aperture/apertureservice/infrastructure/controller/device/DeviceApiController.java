@@ -96,7 +96,9 @@ public class DeviceApiController {
             @Valid @RequestBody DeviceApiDtos.SamplesRequest body) {
         int accepted = appendSamples.append(id, device(auth).userId(), body.samples().stream()
                 .map(s -> new AppendMetadataSamples.NewSample(s.latitude(), s.longitude(),
-                        s.clientTimestamp(), s.deviceInfo()))
+                        s.clientTimestamp(), s.deviceInfo(),
+                        s.horizontalAccuracyM(), s.speedMps(), s.bearingDeg(),
+                        s.altitudeM(), s.batteryPercent()))
                 .toList());
         return new DeviceApiDtos.AcceptedResponse(accepted);
     }
