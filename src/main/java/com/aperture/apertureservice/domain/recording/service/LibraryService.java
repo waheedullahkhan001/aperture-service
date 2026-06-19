@@ -13,6 +13,7 @@ import com.aperture.apertureservice.domain.recording.api.DeleteRecording;
 import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
 import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
+import com.aperture.apertureservice.domain.recording.api.RevokeWatchLink;
 import com.aperture.apertureservice.domain.recording.spi.MetadataSamples;
 import com.aperture.apertureservice.domain.recording.spi.RecordingSegments;
 import com.aperture.apertureservice.domain.recording.spi.Recordings;
@@ -23,7 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @DomainService
-public class LibraryService implements ListRecordings, GetRecording, DownloadSegment, DeleteRecording {
+public class LibraryService implements ListRecordings, GetRecording, DownloadSegment, DeleteRecording, RevokeWatchLink {
 
     static final int RECENT_SAMPLES = 20;
 
@@ -68,6 +69,19 @@ public class LibraryService implements ListRecordings, GetRecording, DownloadSeg
         segments.deleteFor(recordingId);
         samples.deleteFor(recordingId);
         recordings.delete(recordingId);
+    }
+
+    @Override
+    @Transactional
+    public void revoke(UUID userId, UUID recordingId) {
+        Recording r = recordings.byIdForUpdate(recordingId)
+                .orElseThrow(() -> new NotFound("RECORDING_NOT_FOUND", "Recording not found"));
+        if (!r.userId().equals(userId)) {
+            throw new Forbidden("RECORDING_FORBIDDEN", "Recording belongs to another user");
+        }
+        if (!r.viewRevoked()) {
+            recordings.save(r.revokedView());
+        }
     }
 
     private Recording owned(UUID userId, UUID recordingId) {

@@ -8,6 +8,7 @@ import com.aperture.apertureservice.domain.recording.api.DeleteRecording;
 import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
 import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
+import com.aperture.apertureservice.domain.recording.api.RevokeWatchLink;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -34,15 +36,17 @@ public class RecordingsController {
     private final GetRecording getRecording;
     private final DownloadSegment downloadSegment;
     private final DeleteRecording deleteRecording;
+    private final RevokeWatchLink revokeWatchLink;
     private final AppProperties props;
 
     public RecordingsController(ListRecordings listRecordings, GetRecording getRecording,
                                 DownloadSegment downloadSegment, DeleteRecording deleteRecording,
-                                AppProperties props) {
+                                RevokeWatchLink revokeWatchLink, AppProperties props) {
         this.listRecordings = listRecordings;
         this.getRecording = getRecording;
         this.downloadSegment = downloadSegment;
         this.deleteRecording = deleteRecording;
+        this.revokeWatchLink = revokeWatchLink;
         this.props = props;
     }
 
@@ -80,5 +84,11 @@ public class RecordingsController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(Authentication auth, @PathVariable UUID id) {
         deleteRecording.delete(MeController.userId(auth), id);
+    }
+
+    @PostMapping("/{id}/revoke-link")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeLink(Authentication auth, @PathVariable UUID id) {
+        revokeWatchLink.revoke(MeController.userId(auth), id);
     }
 }

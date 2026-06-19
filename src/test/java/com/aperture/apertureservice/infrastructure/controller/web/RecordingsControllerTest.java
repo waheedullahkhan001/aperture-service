@@ -13,6 +13,7 @@ import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
 import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.GetWatchView;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
+import com.aperture.apertureservice.domain.recording.api.RevokeWatchLink;
 import com.aperture.apertureservice.domain.recording.api.StreamWatchSegment;
 import com.aperture.apertureservice.ddd.PageOf;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
@@ -70,6 +71,7 @@ class RecordingsControllerTest {
     @MockitoBean GetRecording getRecording;
     @MockitoBean DownloadSegment downloadSegment;
     @MockitoBean DeleteRecording deleteRecording;
+    @MockitoBean RevokeWatchLink revokeWatchLink;
     @MockitoBean GetWatchView getWatchView;
     @MockitoBean StreamWatchSegment streamWatchSegment;
 
