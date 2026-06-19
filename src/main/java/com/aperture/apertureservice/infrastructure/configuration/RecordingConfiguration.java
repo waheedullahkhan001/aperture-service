@@ -36,8 +36,10 @@ public class RecordingConfiguration {
 
     @Bean
     StreamAuthService streamAuthService(IdentifyDevice identifyDevice, Recordings recordings,
-                                        Users users, MetadataSamples samples, AppProperties props) {
-        return new StreamAuthService(identifyDevice, recordings, users, samples,
+                                        Users users, MetadataSamples samples,
+                                        RecordingSegments segments, SegmentFileStore files,
+                                        AppProperties props) {
+        return new StreamAuthService(identifyDevice, recordings, users, samples, segments, files,
                 props.streaming().hlsBase(), props.streaming().webrtcBase());
     }
 

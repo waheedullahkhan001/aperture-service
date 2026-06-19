@@ -8,33 +8,45 @@ import com.aperture.apertureservice.domain.account.User;
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.domain.recording.Recording;
+import com.aperture.apertureservice.domain.recording.SegmentDownload;
+import com.aperture.apertureservice.domain.recording.WatchSegment;
 import com.aperture.apertureservice.domain.recording.WatchView;
 import com.aperture.apertureservice.domain.recording.api.AuthorizePublish;
 import com.aperture.apertureservice.domain.recording.api.AuthorizeView;
 import com.aperture.apertureservice.domain.recording.api.GetWatchView;
+import com.aperture.apertureservice.domain.recording.api.StreamWatchSegment;
 import com.aperture.apertureservice.domain.recording.spi.MetadataSamples;
+import com.aperture.apertureservice.domain.recording.spi.RecordingSegments;
 import com.aperture.apertureservice.domain.recording.spi.Recordings;
+import com.aperture.apertureservice.domain.recording.spi.SegmentFileStore;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 @DomainService
-public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWatchView {
+public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWatchView, StreamWatchSegment {
 
     private final IdentifyDevice identifyDevice;
     private final Recordings recordings;
     private final Users users;
     private final MetadataSamples samples;
+    private final RecordingSegments segments;
+    private final SegmentFileStore files;
     private final String hlsBase;
     private final String webrtcBase;
 
     public StreamAuthService(IdentifyDevice identifyDevice, Recordings recordings, Users users,
-                             MetadataSamples samples, String hlsBase, String webrtcBase) {
+                             MetadataSamples samples, RecordingSegments segments, SegmentFileStore files,
+                             String hlsBase, String webrtcBase) {
         this.identifyDevice = identifyDevice;
         this.recordings = recordings;
         this.users = users;
         this.samples = samples;
+        this.segments = segments;
+        this.files = files;
         this.hlsBase = hlsBase;
         this.webrtcBase = webrtcBase;
     }
@@ -59,9 +71,24 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
     public WatchView watch(UUID recordingId, String viewSecret) {
         Recording r = verifiedRow(recordingId, viewSecret);
         String ownerName = users.byId(r.userId()).map(User::fullname).orElse("Unknown");
+        List<WatchSegment> watchSegments = segments.byRecording(recordingId).stream()
+                .sorted(Comparator.comparing(s -> s.startTime() != null ? s.startTime() : java.time.Instant.EPOCH))
+                .map(s -> new WatchSegment(s.segmentNumber(), s.startTime(), s.endTime(),
+                        s.source() != null ? s.source().name() : "STREAMED", s.quality(), s.sizeBytes()))
+                .toList();
         return new WatchView(ownerName, r.startedAt(), r.status(), samples.latest(recordingId),
                 hlsBase + "/aperture/" + recordingId + "/index.m3u8?t=" + r.viewSecret(),
-                webrtcBase + "/aperture/" + recordingId + "/whep?t=" + r.viewSecret());
+                webrtcBase + "/aperture/" + recordingId + "/whep?t=" + r.viewSecret(),
+                watchSegments);
+    }
+
+    @Override
+    public SegmentDownload stream(UUID recordingId, int segmentNumber, String viewSecret) {
+        verifiedRow(recordingId, viewSecret);
+        var segment = segments.byNumber(recordingId, segmentNumber)
+                .orElseThrow(() -> new NotFound("SEGMENT_NOT_FOUND", "Segment not found"));
+        String filename = "segment-" + segmentNumber + ".mp4";
+        return files.open(segment.filePath(), filename);
     }
 
     private Recording verifiedRow(UUID recordingId, String viewSecret) {

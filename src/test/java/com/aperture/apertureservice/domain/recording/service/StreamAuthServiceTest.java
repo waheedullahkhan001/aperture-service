@@ -15,7 +15,9 @@ import com.aperture.apertureservice.domain.recording.RecordingStatus;
 import com.aperture.apertureservice.domain.recording.WatchView;
 import com.aperture.apertureservice.domain.recording.spi.stubs.FixedAlertPolicy;
 import com.aperture.apertureservice.domain.recording.spi.stubs.InMemoryMetadataSamples;
+import com.aperture.apertureservice.domain.recording.spi.stubs.InMemoryRecordingSegments;
 import com.aperture.apertureservice.domain.recording.spi.stubs.InMemoryRecordings;
+import com.aperture.apertureservice.domain.recording.spi.stubs.InMemorySegmentFileStore;
 import com.aperture.apertureservice.domain.account.service.DeviceService;
 import com.github.f4b6a3.uuid.UuidCreator;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,13 +41,15 @@ class StreamAuthServiceTest {
     private final InMemoryUsers users = new InMemoryUsers();
     private final InMemoryDevices devices = new InMemoryDevices();
     private final InMemoryMetadataSamples samples = new InMemoryMetadataSamples();
+    private final InMemoryRecordingSegments segments = new InMemoryRecordingSegments();
+    private final InMemorySegmentFileStore files = new InMemorySegmentFileStore();
     private final FixedRandomTokens tokens = new FixedRandomTokens();
     private final Clock clock = Clock.fixed(T0, ZoneOffset.UTC);
     private final DeviceService deviceService = new DeviceService(users, devices, tokens, clock);
     private final RecordingService recordingService =
             new RecordingService(recordings, new FixedAlertPolicy(null), tokens, clock);
     private final StreamAuthService service = new StreamAuthService(deviceService, recordings, users, samples,
-            "http://localhost:8888", "http://localhost:8889");
+            segments, files, "http://localhost:8888", "http://localhost:8889");
 
     private UUID userId;
     private String deviceToken;

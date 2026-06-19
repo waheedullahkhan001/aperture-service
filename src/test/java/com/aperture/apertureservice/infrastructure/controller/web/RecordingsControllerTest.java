@@ -13,6 +13,7 @@ import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
 import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.GetWatchView;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
+import com.aperture.apertureservice.domain.recording.api.StreamWatchSegment;
 import com.aperture.apertureservice.ddd.PageOf;
 import com.aperture.apertureservice.infrastructure.configuration.AppProperties;
 import com.aperture.apertureservice.infrastructure.controller.publicapi.WatchController;
@@ -70,6 +71,7 @@ class RecordingsControllerTest {
     @MockitoBean DownloadSegment downloadSegment;
     @MockitoBean DeleteRecording deleteRecording;
     @MockitoBean GetWatchView getWatchView;
+    @MockitoBean StreamWatchSegment streamWatchSegment;
 
     private final UUID userId = UUID.randomUUID();
     private final UUID recId = UUID.randomUUID();
@@ -120,7 +122,7 @@ class RecordingsControllerTest {
     @Test
     void watchWithoutSampleReturnsNullLatestSample() throws Exception {
         when(getWatchView.watch(recId, "apv_s")).thenReturn(new WatchView("Owner", t,
-                RecordingStatus.PENDING, Optional.empty(), "http://hls", "http://whep"));
+                RecordingStatus.PENDING, Optional.empty(), "http://hls", "http://whep", List.of()));
         mvc.perform(get("/api/public/watch/" + recId + "?t=apv_s"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.latestSample").value(nullValue()));
@@ -138,7 +140,7 @@ class RecordingsControllerTest {
         when(getWatchView.watch(recId, "apv_s")).thenReturn(new WatchView("Owner", t,
                 RecordingStatus.RECORDING,
                 Optional.of(new MetadataSample(1L, recId, new BigDecimal("1.5"), new BigDecimal("2.5"), t, t, "Pixel")),
-                "http://hls", "http://whep"));
+                "http://hls", "http://whep", List.of()));
         mvc.perform(get("/api/public/watch/" + recId + "?t=apv_s"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ownerName").value("Owner"))
