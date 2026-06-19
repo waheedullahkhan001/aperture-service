@@ -36,18 +36,21 @@ public class UploadClipService implements UploadClip {
     @Transactional
     public RecordingSegment upload(UUID recordingId, UUID userId, InputStream data, String filename,
                                    long sizeHint, Instant startTime, Instant endTime,
-                                   String quality, Integer segmentNumber) {
+                                   String quality, String clipId) {
         // 1. Ensure recording exists and belongs to this user (creates if absent — pure-offline case)
         ensureRecording.ensure(recordingId, userId, startTime);
 
-        // 2. Determine segment number
-        int number = (segmentNumber != null) ? segmentNumber : segments.nextNumber(recordingId);
-
-        // 3. Idempotency: if a segment with this (recordingId, number) already exists, return it
-        var existing = segments.byNumber(recordingId, number);
+        // 2. Idempotency: if a segment with this clientClipId already exists, return it.
+        //    Keying on clientClipId (not segmentNumber) prevents a collision where a streamed
+        //    segment already occupies the phone-supplied number (the original bug).
+        var existing = segments.byClientClipId(recordingId, clipId);
         if (existing.isPresent()) {
             return existing.get();
         }
+
+        // 3. Server-assign segmentNumber — guarantees uniqueness within the recording regardless
+        //    of what the streaming path has already consumed.
+        int number = segments.nextNumber(recordingId);
 
         // 4. Store the file on disk
         String storedPath;
@@ -60,7 +63,7 @@ public class UploadClipService implements UploadClip {
 
         // 5. Insert segment record (source=UPLOADED, uploaded=true — file is available)
         RecordingSegment segment = new RecordingSegment(null, recordingId, number, storedPath,
-                startTime, endTime, size, true, SegmentSource.UPLOADED, quality);
+                startTime, endTime, size, true, SegmentSource.UPLOADED, quality, clipId);
         segments.save(segment);
 
         // 6. Complete a never-streamed (PENDING) recording — a pure-offline recording is finished
@@ -74,6 +77,6 @@ public class UploadClipService implements UploadClip {
             }
         });
 
-        return segments.byNumber(recordingId, number).orElse(segment);
+        return segments.byClientClipId(recordingId, clipId).orElse(segment);
     }
 }

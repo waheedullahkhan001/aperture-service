@@ -124,11 +124,11 @@ public class DeviceApiController {
             @RequestParam("startTime") Instant startTime,
             @RequestParam("endTime") Instant endTime,
             @RequestParam(value = "quality", required = false) String quality,
-            @RequestParam(value = "segmentNumber", required = false) Integer segmentNumber)
+            @RequestParam("clipId") String clipId)
             throws IOException {
         RecordingSegment seg = uploadClip.upload(id, device(auth).userId(),
                 file.getInputStream(), sanitizeFilename(file.getOriginalFilename()),
-                file.getSize(), startTime, endTime, quality, segmentNumber);
+                file.getSize(), startTime, endTime, quality, clipId);
         return new DeviceApiDtos.ClipUploadResponse(seg.id(), seg.segmentNumber(),
                 seg.source().name(), seg.quality(), seg.startTime(), seg.endTime(), seg.sizeBytes());
     }
