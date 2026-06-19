@@ -28,3 +28,8 @@ app:
     dispatch-delay: 5s
     retry-delay: 5m
     sweep-delay: 60s
+  rate-limit:
+    login-per-minute: 5
+    register-per-minute: 3
+    password-reset-request-per-minute: 3
+    resend-verification-per-minute: 3

@@ -8,3 +8,12 @@ app:
     dispatch-delay: 1s
     retry-delay: 10s
     sweep-delay: 2s
+  rate-limit:
+    # Very high limits under the test profile so the shared 127.0.0.1 bucket
+    # is never exhausted by normal integration tests.
+    # The dedicated AuthRateLimitTest overrides these with low values via
+    # @SpringBootTest(properties = ...) and targets a distinct X-Forwarded-For IP.
+    login-per-minute: 1000000
+    register-per-minute: 1000000
+    password-reset-request-per-minute: 1000000
+    resend-verification-per-minute: 1000000
