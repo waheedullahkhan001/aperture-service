@@ -6,7 +6,10 @@ import com.aperture.apertureservice.domain.recording.SegmentDownload;
 import com.aperture.apertureservice.domain.recording.spi.SegmentFileStore;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Stub
@@ -28,4 +31,11 @@ public class InMemorySegmentFileStore implements SegmentFileStore {
     }
 
     @Override public void delete(String filePath) { files.remove(filePath); }
+
+    @Override public String store(UUID recordingId, String filename, InputStream data) throws IOException {
+        byte[] bytes = data.readAllBytes();
+        String path = "/recordings/aperture/" + recordingId + "/" + filename;
+        files.put(path, bytes);
+        return path;
+    }
 }

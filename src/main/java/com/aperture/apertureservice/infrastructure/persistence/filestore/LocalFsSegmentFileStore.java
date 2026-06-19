@@ -8,8 +8,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
 
 public class LocalFsSegmentFileStore implements SegmentFileStore {
 
@@ -70,5 +73,17 @@ public class LocalFsSegmentFileStore implements SegmentFileStore {
         } catch (IOException e) {
             log.warn("Could not delete segment file {}: {}", filePath, e.toString());
         }
+    }
+
+    @Override
+    public String store(UUID recordingId, String filename, InputStream data) throws IOException {
+        Path dir = root.resolve("aperture").resolve(recordingId.toString());
+        Files.createDirectories(dir);
+        Path target = dir.resolve(filename).normalize();
+        if (!target.startsWith(root)) {
+            throw new Forbidden("PATH_FORBIDDEN", "Path outside the recordings root");
+        }
+        Files.copy(data, target, StandardCopyOption.REPLACE_EXISTING);
+        return target.toString();
     }
 }
