@@ -183,6 +183,24 @@ class ClipUploadIntegrationTest {
     }
 
     @Test
+    void uploadToLiveRecordingDoesNotEndIt() throws Exception {
+        // Mid-emergency gap-fill (SRS-036): clips stream in while the recording is still RECORDING.
+        // The upload must add the segment WITHOUT ending the live recording — only the streaming
+        // lifecycle (publish-end) ends those. (Regression: previously any upload ended a live one.)
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+        Recording liveRec = new Recording(recId, userId, RecordingStatus.RECORDING,
+                Instant.now(), null, "apv_live_" + UUID.randomUUID(), null, null);
+        recordings.insertIfAbsent(liveRec);
+
+        MvcResult result = uploadClip(recId, CLIP_CONTENT.getBytes(), "gap.mp4",
+                "2026-06-19T14:00:00Z", "2026-06-19T14:00:30Z", 7);
+        assertThat(result.getResponse().getStatus()).isEqualTo(201);
+
+        assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.RECORDING);
+        assertThat(segments.byRecording(recId)).anyMatch(s -> s.source() == SegmentSource.UPLOADED);
+    }
+
+    @Test
     void downloadUploadedSegmentReturnsBytes() throws Exception {
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         uploadClip(recId, CLIP_CONTENT.getBytes(), "clip1.mp4",

@@ -2,6 +2,7 @@ package com.aperture.apertureservice.domain.recording.service;
 
 import com.aperture.apertureservice.ddd.DomainService;
 import com.aperture.apertureservice.domain.recording.RecordingSegment;
+import com.aperture.apertureservice.domain.recording.RecordingStatus;
 import com.aperture.apertureservice.domain.recording.SegmentSource;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
 import com.aperture.apertureservice.domain.recording.api.UploadClip;
@@ -62,9 +63,13 @@ public class UploadClipService implements UploadClip {
                 startTime, endTime, size, true, SegmentSource.UPLOADED, quality);
         segments.save(segment);
 
-        // 6. Mark recording ENDED — offline recordings are always complete; live() covers PENDING
+        // 6. Complete a never-streamed (PENDING) recording — a pure-offline recording is finished
+        // when its clips arrive. CRUCIALLY do NOT end a RECORDING one: clips also stream in
+        // mid-recording at reconnect (SRS-036) while an emergency is still live, and the streaming
+        // lifecycle (publish-end) owns ending those. Ending a live recording here would prematurely
+        // mark an in-progress emergency as ENDED.
         recordings.byId(recordingId).ifPresent(r -> {
-            if (r.live()) {
+            if (r.status() == RecordingStatus.PENDING) {
                 recordings.save(r.ended(endTime));
             }
         });
