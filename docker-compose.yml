@@ -67,6 +67,7 @@ services:
       - "8554:8554"             # RTSP publish (the phone) — the only public streaming port
       - "127.0.0.1:8888:8888"   # HLS — public access goes through nginx
       - "127.0.0.1:8889:8889"   # WebRTC/WHEP — same
+      - "127.0.0.1:9996:9996"   # playback server (recorded-timeline) — loopback; public via nginx /playback/
     volumes:
       - recordings:/data/recordings
     depends_on:
