@@ -3,6 +3,10 @@ spring:
     name: aperture-service
   profiles:
     default: dev
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
   task:
     scheduling:
       pool:
