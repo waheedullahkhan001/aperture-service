@@ -28,6 +28,8 @@ app:
   streaming:
     hls-base: "http://localhost:8888"
     webrtc-base: "http://localhost:8889"
+  mediamtx:
+    playback-base: "http://mediamtx:9996"
   schedule:
     dispatch-delay: 5s
     retry-delay: 5m
