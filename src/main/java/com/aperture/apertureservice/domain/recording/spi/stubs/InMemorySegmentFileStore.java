@@ -38,4 +38,17 @@ public class InMemorySegmentFileStore implements SegmentFileStore {
         files.put(path, bytes);
         return path;
     }
+
+    @Override public java.nio.file.Path pathOf(String filePath) {
+        byte[] b = files.get(filePath);
+        if (b == null) throw new com.aperture.apertureservice.ddd.NotFound("SEGMENT_FILE_MISSING", "Segment file missing");
+        try {
+            java.nio.file.Path tmp = java.nio.file.Files.createTempFile("stub-segment-", ".mp4");
+            java.nio.file.Files.write(tmp, b);
+            tmp.toFile().deleteOnExit();
+            return tmp;
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("InMemorySegmentFileStore.pathOf failed", e);
+        }
+    }
 }

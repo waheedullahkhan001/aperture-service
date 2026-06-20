@@ -50,10 +50,19 @@ public class LocalFsSegmentFileStore implements SegmentFileStore {
         Path p = insideRoot(filePath);
         try {
             long size = Files.size(p);
-            return new SegmentDownload(Files.newInputStream(p), size, downloadFilename);
+            return new SegmentDownload(Files.newInputStream(p), size, downloadFilename, p);
         } catch (IOException e) {
             throw new NotFound("SEGMENT_FILE_MISSING", "Segment file missing");
         }
+    }
+
+    @Override
+    public Path pathOf(String filePath) {
+        Path p = insideRoot(filePath); // throws Forbidden if outside root
+        if (!Files.exists(p)) {
+            throw new NotFound("SEGMENT_FILE_MISSING", "Segment file missing");
+        }
+        return p;
     }
 
     /** Best-effort by design: a leaked file with a deleted row is accepted (logged), never blocking. */

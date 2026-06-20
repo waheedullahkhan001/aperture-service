@@ -270,4 +270,19 @@ class WatchClipsIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().bytes(CLIP_BYTES));
     }
+
+    @Test
+    void segmentStreamSupportsRangeRequest() throws Exception {
+        UUID recId = UuidCreator.getTimeOrderedEpoch();
+        // CLIP_BYTES is "watch-clip-bytes" (16 bytes). Request bytes 0-4 → 5 bytes.
+        String secret = uploadClipAndGetSecret(recId, CLIP_BYTES,
+                "2026-06-19T18:00:00Z", "2026-06-19T18:01:00Z", "clip-range-1");
+
+        mvc.perform(get("/api/public/watch/{id}/segments/1", recId)
+                        .param("t", secret)
+                        .header("Range", "bytes=0-4"))
+                .andExpect(status().isPartialContent())   // 206
+                .andExpect(header().string("Accept-Ranges", "bytes"))
+                .andExpect(content().bytes("watch".getBytes()));
+    }
 }
