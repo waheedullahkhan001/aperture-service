@@ -52,8 +52,6 @@ paths:
       -H "Authorization: Bearer __WEBHOOK_SECRET__"
       -d "{\"path\":\"$MTX_PATH\"}"
 
-    runOnRecordSegmentComplete: >-
-      curl -sS -o /dev/null -X POST http://backend:8080/internal/streams/hooks/segment-complete
-      -H "Content-Type: application/json"
-      -H "Authorization: Bearer __WEBHOOK_SECRET__"
-      -d "{\"path\":\"$MTX_PATH\",\"segmentPath\":\"$MTX_SEGMENT_PATH\",\"duration\":\"$MTX_SEGMENT_DURATION\"}"
+    # normalize-segment.sh remuxes the segment (fixes non-monotonic DTS from phone,
+    # adds faststart), then notifies the backend. See infra/mediamtx/normalize-segment.sh.
+    runOnRecordSegmentComplete: /normalize-segment.sh
