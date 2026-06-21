@@ -143,4 +143,25 @@ class StreamAuthServiceTest {
         assertThat(view.samples()).isEmpty();
         assertThat(view.latestSample()).isEmpty();
     }
+
+    @Test
+    void watchViewReturnsMoreThan20SamplesWhenRecordingHas25() {
+        Recording r = recordingService.ensure(recId, userId, null).recording();
+        // Insert 25 samples spaced 8 seconds apart (typical phone cadence)
+        List<MetadataSample> toSave = new java.util.ArrayList<>();
+        for (int i = 0; i < 25; i++) {
+            Instant t = T0.plusSeconds((long) i * 8);
+            toSave.add(new MetadataSample(null, recId, new BigDecimal("33.0"), new BigDecimal("73.0"),
+                    t, t, "Pixel", null, null, null, null, null));
+        }
+        samples.saveAll(toSave);
+
+        WatchView view = service.watch(recId, r.viewSecret());
+
+        // public watch endpoint must NOT be capped at 20; all 25 must come back
+        assertThat(view.samples()).hasSize(25);
+        // still chronological ASC
+        assertThat(view.samples().get(0).clientTimestamp()).isEqualTo(T0);
+        assertThat(view.samples().get(24).clientTimestamp()).isEqualTo(T0.plusSeconds(24 * 8));
+    }
 }

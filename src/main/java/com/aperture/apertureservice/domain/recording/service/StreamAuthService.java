@@ -27,10 +27,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import static com.aperture.apertureservice.domain.recording.service.LibraryService.RECENT_SAMPLES;
-
 @DomainService
 public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWatchView, StreamWatchSegment {
+
+    static final int WATCH_SAMPLES_LIMIT = 1000;
 
     private final IdentifyDevice identifyDevice;
     private final Recordings recordings;
@@ -81,7 +81,7 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
                 .toList();
         // recent() returns DESC; reverse to chronological ASC for the watch payload
         List<com.aperture.apertureservice.domain.recording.MetadataSample> recentDesc =
-                samples.recent(recordingId, RECENT_SAMPLES);
+                samples.recent(recordingId, WATCH_SAMPLES_LIMIT);
         List<com.aperture.apertureservice.domain.recording.MetadataSample> chronological =
                 recentDesc.reversed();
         return new WatchView(ownerName, r.startedAt(), r.status(), samples.latest(recordingId),
