@@ -9,6 +9,10 @@ logDestinations: [stdout]
 playback: yes
 playbackAddress: :9996
 
+# Pre-warm the HLS muxer as soon as a publisher connects, without waiting for the
+# first viewer request. Eliminates the first-viewer cold-start delay.
+hlsAlwaysRemux: yes
+
 # Auth callback: mediamtx cannot send custom headers, but preserves this URL's
 # query verbatim in every callback — the backend accepts ?secret= on this one path.
 authMethod: http
