@@ -1,14 +1,6 @@
 logLevel: info
 logDestinations: [stdout]
 
-# built-in playback server: serves a recording as one continuous, seekable, correct-duration
-# MP4 over a time range (GET /get?path=...&start=<RFC3339>&duration=<s>&format=mp4) — this is how
-# the web watch page scrubs recorded footage (native <video>), instead of raw fmp4 fragments.
-# Auth: playback hits our auth hook with action "playback" (viewSecret + revoke apply). Reached
-# publicly only via the nginx /playback/ proxy (port 9996 stays loopback/compose-internal).
-playback: yes
-playbackAddress: :9996
-
 # Pre-warm the HLS muxer as soon as a publisher connects, without waiting for the
 # first viewer request. Eliminates the first-viewer cold-start delay.
 hlsAlwaysRemux: yes
