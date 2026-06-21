@@ -7,12 +7,34 @@ public record Recording(UUID id, UUID userId, RecordingStatus status, Instant st
                         Instant endedAt, String viewSecret, Instant countdownEndsAt,
                         Instant alertsDispatchedAt, boolean viewRevoked) {
 
+    /**
+     * A recording is "live" if it has not been explicitly ended by the device.
+     * INTERRUPTED is live: the phone disconnected but the emergency is still ongoing —
+     * alerts still fire and the recording can resume.
+     */
     public boolean live() {
-        return status == RecordingStatus.PENDING || status == RecordingStatus.RECORDING;
+        return status == RecordingStatus.PENDING
+                || status == RecordingStatus.RECORDING
+                || status == RecordingStatus.INTERRUPTED;
+    }
+
+    /**
+     * True if the recording can be resumed by a publisher reconnect.
+     * PENDING and INTERRUPTED are resumable; RECORDING means already active.
+     * ENDED and FAILED are terminal — a reconnect must not revive them.
+     */
+    public boolean resumable() {
+        return status == RecordingStatus.PENDING || status == RecordingStatus.INTERRUPTED;
     }
 
     public Recording streaming() {
         return new Recording(id, userId, RecordingStatus.RECORDING, startedAt, endedAt,
+                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
+    }
+
+    /** Connection lost — not ended, just disconnected. Does NOT set ended_at. */
+    public Recording interrupted() {
+        return new Recording(id, userId, RecordingStatus.INTERRUPTED, startedAt, null,
                 viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
     }
 
