@@ -66,30 +66,42 @@ public class RecordingService implements EnsureRecording, MarkStreaming, EndReco
     @Transactional
     public void markStreaming(UUID recordingId, UUID userId) {
         Recording r = owned(recordingId, userId);
+        // Resumes from PENDING (first connect) or INTERRUPTED (reconnect after disconnect).
+        // RECORDING is a no-op (duplicate hook). ENDED/FAILED are terminal and must not resume.
         // Known benign race: a concurrent end could commit between this read and the save,
         // leaving a zombie RECORDING row. MediaMTX fires publish-start before publish-end per
         // session, and the stale sweeper FAILs any zombie within minutes — accepted for MVP.
-        if (r.status() == RecordingStatus.PENDING) {
+        if (r.resumable()) {
             recordings.save(r.streaming());
         }
     }
 
+    /**
+     * Device explicit end: the user pressed stop. Transitions any non-ENDED recording to ENDED.
+     * This is the ONLY normal path to ENDED.
+     */
     @Override
     @Transactional
     public void end(UUID recordingId, UUID userId) {
-        endInternal(owned(recordingId, userId));
+        Recording r = owned(recordingId, userId);
+        if (r.status() != RecordingStatus.ENDED && r.status() != RecordingStatus.FAILED) {
+            recordings.save(r.ended(clock.instant()));
+        }
     }
 
+    /**
+     * System disconnect (publish-end hook): the publisher dropped the connection.
+     * Transitions live recordings to INTERRUPTED — not ended, just disconnected.
+     * A subsequent publish-start (reconnect) will resume the same recording.
+     */
     @Override
     @Transactional
     public void endAsSystem(UUID recordingId) {
-        recordings.byId(recordingId).ifPresent(this::endInternal);
-    }
-
-    private void endInternal(Recording r) {
-        if (r.live()) {
-            recordings.save(r.ended(clock.instant()));
-        }
+        recordings.byId(recordingId).ifPresent(r -> {
+            if (r.live()) {
+                recordings.save(r.interrupted());
+            }
+        });
     }
 
     @Override

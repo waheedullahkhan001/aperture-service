@@ -30,7 +30,7 @@ interface RecordingJpaRepository extends JpaRepository<RecordingJpaEntity, UUID>
             select r from RecordingJpaEntity r
             where r.countdownEndsAt is not null and r.countdownEndsAt <= :now
               and r.alertsDispatchedAt is null
-              and r.status in ('PENDING','RECORDING')""")
+              and r.status in ('PENDING','RECORDING','INTERRUPTED')""")
     List<RecordingJpaEntity> dispatchDue(Instant now);
 
     @Query("""
