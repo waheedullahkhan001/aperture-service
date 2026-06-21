@@ -105,4 +105,42 @@ class StreamAuthServiceTest {
         assertThat(view.webrtcUrl())
                 .isEqualTo("http://localhost:8889/aperture/" + recId + "/whep?t=" + r.viewSecret());
     }
+
+    @Test
+    void watchViewSamplesAreChronologicalAndLatestSampleStillPresent() {
+        Recording r = recordingService.ensure(recId, userId, null).recording();
+        Instant t1 = T0.minusSeconds(60);
+        Instant t2 = T0;
+        Instant t3 = T0.plusSeconds(30);
+        samples.saveAll(List.of(
+                new MetadataSample(null, recId, new BigDecimal("33.1"), new BigDecimal("73.1"),
+                        t2, t2, "Pixel", null, 1.5, 90.0, null, 80),
+                new MetadataSample(null, recId, new BigDecimal("33.0"), new BigDecimal("73.0"),
+                        t1, t1, "Pixel", 5.0, null, null, 500.0, 85),
+                new MetadataSample(null, recId, new BigDecimal("33.2"), new BigDecimal("73.2"),
+                        t3, t3, "Pixel", null, 2.0, 180.0, null, 75)
+        ));
+
+        WatchView view = service.watch(recId, r.viewSecret());
+
+        // latestSample still present (the most recent by clientTimestamp)
+        assertThat(view.latestSample()).isPresent();
+        assertThat(view.latestSample().get().clientTimestamp()).isEqualTo(t3);
+
+        // samples list is chronological (ASC by clientTimestamp)
+        assertThat(view.samples()).hasSize(3);
+        assertThat(view.samples().get(0).clientTimestamp()).isEqualTo(t1);
+        assertThat(view.samples().get(1).clientTimestamp()).isEqualTo(t2);
+        assertThat(view.samples().get(2).clientTimestamp()).isEqualTo(t3);
+    }
+
+    @Test
+    void watchViewSamplesEmptyWhenNoSamplesExist() {
+        Recording r = recordingService.ensure(recId, userId, null).recording();
+
+        WatchView view = service.watch(recId, r.viewSecret());
+
+        assertThat(view.samples()).isEmpty();
+        assertThat(view.latestSample()).isEmpty();
+    }
 }
