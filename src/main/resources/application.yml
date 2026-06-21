@@ -5,8 +5,11 @@ spring:
     default: dev
   servlet:
     multipart:
-      max-file-size: 200MB
-      max-request-size: 200MB
+      # 512MB cap for clip uploads — margin so a long fully-offline recording
+      # (whole-file fallback) isn't dropped. Kept in sync with nginx
+      # client_max_body_size and Android's upload pre-skip.
+      max-file-size: 512MB
+      max-request-size: 512MB
   task:
     scheduling:
       pool:
