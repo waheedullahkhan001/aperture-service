@@ -11,9 +11,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate   # Flyway owns the schema; Hibernate only verifies
-app:
-  mediamtx:
-    playback-base: "http://localhost:9996"
 logging:
   level:
     com.aperture: DEBUG

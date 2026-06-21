@@ -10,7 +10,6 @@ import com.aperture.apertureservice.domain.recording.SegmentSource;
 import com.aperture.apertureservice.domain.recording.WatchView;
 import com.aperture.apertureservice.domain.recording.api.DeleteRecording;
 import com.aperture.apertureservice.domain.recording.api.DownloadSegment;
-import com.aperture.apertureservice.domain.recording.api.FetchTimeline;
 import com.aperture.apertureservice.domain.recording.api.GetRecording;
 import com.aperture.apertureservice.domain.recording.api.GetWatchView;
 import com.aperture.apertureservice.domain.recording.api.ListRecordings;
@@ -63,8 +62,7 @@ class RecordingsControllerTest {
                     new AppProperties.Jwt("x", java.time.Duration.ofMinutes(15)),
                     new AppProperties.Session(java.time.Duration.ofDays(30)),
                     new AppProperties.Streaming("http://localhost:8888", "http://localhost:8889"),
-                    new AppProperties.Schedule(java.time.Duration.ofSeconds(5), java.time.Duration.ofMinutes(5), java.time.Duration.ofSeconds(60)),
-                    new AppProperties.MediaMtx("http://mediamtx:9996"));
+                    new AppProperties.Schedule(java.time.Duration.ofSeconds(5), java.time.Duration.ofMinutes(5), java.time.Duration.ofSeconds(60)));
         }
     }
 
@@ -76,7 +74,6 @@ class RecordingsControllerTest {
     @MockitoBean RevokeWatchLink revokeWatchLink;
     @MockitoBean GetWatchView getWatchView;
     @MockitoBean StreamWatchSegment streamWatchSegment;
-    @MockitoBean FetchTimeline fetchTimeline;
 
     private final UUID userId = UUID.randomUUID();
     private final UUID recId = UUID.randomUUID();

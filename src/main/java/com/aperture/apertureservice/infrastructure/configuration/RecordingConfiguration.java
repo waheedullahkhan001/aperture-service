@@ -3,7 +3,6 @@ package com.aperture.apertureservice.infrastructure.configuration;
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
-import com.aperture.apertureservice.domain.recording.service.PlaybackTimelineService;
 import com.aperture.apertureservice.domain.recording.service.UploadClipService;
 import com.aperture.apertureservice.domain.recording.service.LibraryService;
 import com.aperture.apertureservice.domain.recording.service.RecordingService;
@@ -11,16 +10,13 @@ import com.aperture.apertureservice.domain.recording.service.StreamAuthService;
 import com.aperture.apertureservice.domain.recording.service.TelemetryService;
 import com.aperture.apertureservice.domain.recording.spi.AlertPolicy;
 import com.aperture.apertureservice.domain.recording.spi.MetadataSamples;
-import com.aperture.apertureservice.domain.recording.spi.PlaybackSource;
 import com.aperture.apertureservice.domain.recording.spi.RecordingSegments;
 import com.aperture.apertureservice.domain.recording.spi.Recordings;
 import com.aperture.apertureservice.domain.recording.spi.SegmentFileStore;
 import com.aperture.apertureservice.ddd.RandomTokens;
-import com.aperture.apertureservice.infrastructure.mediamtx.MediaMtxPlaybackClient;
 import com.aperture.apertureservice.infrastructure.persistence.filestore.LocalFsSegmentFileStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.Clock;
 
@@ -65,15 +61,4 @@ public class RecordingConfiguration {
         return new UploadClipService(ensureRecording, recordings, segments, files);
     }
 
-    @Bean
-    MediaMtxPlaybackClient mediaMtxPlaybackClient(AppProperties props, ObjectMapper mapper) {
-        return new MediaMtxPlaybackClient(props.mediaMtx().playbackBase(), mapper);
-    }
-
-    @Bean
-    PlaybackTimelineService playbackTimelineService(Recordings recordings,
-                                                    PlaybackSource playbackSource,
-                                                    AppProperties props) {
-        return new PlaybackTimelineService(recordings, playbackSource, props.recordingsPath());
-    }
 }

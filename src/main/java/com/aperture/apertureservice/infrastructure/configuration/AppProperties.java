@@ -12,12 +12,10 @@ public record AppProperties(
         Jwt jwt,
         Session session,
         Streaming streaming,
-        Schedule schedule,
-        MediaMtx mediaMtx) {
+        Schedule schedule) {
 
     public record Jwt(String secret, Duration accessTtl) {}
     public record Session(Duration refreshTtl) {}
     public record Streaming(String hlsBase, String webrtcBase) {}
     public record Schedule(Duration dispatchDelay, Duration retryDelay, Duration sweepDelay) {}
-    public record MediaMtx(String playbackBase) {}
 }

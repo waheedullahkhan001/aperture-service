@@ -13,8 +13,7 @@ class ProdSecretGuardTest {
                 new AppProperties.Jwt(jwtSecret, Duration.ofMinutes(15)),
                 new AppProperties.Session(Duration.ofDays(30)),
                 new AppProperties.Streaming("h", "w"),
-                new AppProperties.Schedule(Duration.ofSeconds(5), Duration.ofMinutes(5), Duration.ofSeconds(60)),
-                new AppProperties.MediaMtx("http://mediamtx:9996"));
+                new AppProperties.Schedule(Duration.ofSeconds(5), Duration.ofMinutes(5), Duration.ofSeconds(60)));
     }
 
     @Test

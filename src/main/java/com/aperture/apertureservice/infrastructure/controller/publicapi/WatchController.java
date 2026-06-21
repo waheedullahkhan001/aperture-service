@@ -4,7 +4,6 @@ import com.aperture.apertureservice.domain.recording.MetadataSample;
 import com.aperture.apertureservice.domain.recording.SegmentDownload;
 import com.aperture.apertureservice.domain.recording.WatchSegment;
 import com.aperture.apertureservice.domain.recording.WatchView;
-import com.aperture.apertureservice.domain.recording.api.FetchTimeline;
 import com.aperture.apertureservice.domain.recording.api.GetWatchView;
 import com.aperture.apertureservice.domain.recording.api.StreamWatchSegment;
 import com.aperture.apertureservice.infrastructure.controller.web.RecordingDtos;
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -32,13 +30,10 @@ public class WatchController {
 
     private final GetWatchView getWatchView;
     private final StreamWatchSegment streamWatchSegment;
-    private final FetchTimeline fetchTimeline;
 
-    public WatchController(GetWatchView getWatchView, StreamWatchSegment streamWatchSegment,
-                           FetchTimeline fetchTimeline) {
+    public WatchController(GetWatchView getWatchView, StreamWatchSegment streamWatchSegment) {
         this.getWatchView = getWatchView;
         this.streamWatchSegment = streamWatchSegment;
-        this.fetchTimeline = fetchTimeline;
     }
 
     public record WatchSegmentDto(int segmentNumber, Instant startTime, Instant endTime,
@@ -74,28 +69,6 @@ public class WatchController {
         return new WatchResponse(v.ownerName(), v.startedAt(), v.status().name(),
                 v.latestSample().map(RecordingDtos.SampleResponse::from).orElse(null),
                 v.hlsUrl(), v.webrtcUrl(), segmentDtos, sampleDtos);
-    }
-
-    /**
-     * Range-capable MP4 playback for a recording's timeline (or a clip window).
-     * Fetches from MediaMTX /get, caches to a file, and serves via FileSystemResource.
-     * Spring MVC automatically handles Range requests (206) for file-backed resources.
-     *
-     * @param start    optional ISO-8601 clip start; omit for full recording
-     * @param duration optional clip duration in seconds; omit for full recording
-     */
-    @GetMapping("/{id}/timeline")
-    public ResponseEntity<Resource> streamTimeline(
-            @PathVariable UUID id,
-            @RequestParam("t") String token,
-            @RequestParam(required = false) String start,
-            @RequestParam(required = false) Double duration) {
-        Path cached = fetchTimeline.fetch(id, token, start, duration);
-        Resource resource = new FileSystemResource(cached);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"timeline-" + id + ".mp4\"")
-                .contentType(MediaType.parseMediaType("video/mp4"))
-                .body(resource);
     }
 
     @GetMapping("/{id}/segments/{n}")
