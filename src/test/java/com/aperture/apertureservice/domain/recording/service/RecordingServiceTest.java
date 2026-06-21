@@ -91,8 +91,9 @@ class RecordingServiceTest {
 
     @Test
     void markStreamingDoesNotResurrectEndedRecording() {
+        // ENDED (via device explicit end) is terminal — reconnect must not resume it.
         service.ensure(recId, userId, null);
-        service.endAsSystem(recId);
+        service.end(recId, userId);  // device explicit end -> ENDED
         service.markStreaming(recId, userId);
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.ENDED);
     }
@@ -114,8 +115,9 @@ class RecordingServiceTest {
 
     @Test
     void ensureOnTerminalRowReturnsItWithoutResurrection() {
+        // ENDED (via device explicit end) is the terminal state — ensure returns it as-is.
         service.ensure(recId, userId, null);
-        service.endAsSystem(recId);
+        service.end(recId, userId);  // device explicit end -> ENDED
         EnsureResult again = service.ensure(recId, userId, null);
         assertThat(again.created()).isFalse();
         assertThat(again.recording().status()).isEqualTo(RecordingStatus.ENDED); // device sees terminal state

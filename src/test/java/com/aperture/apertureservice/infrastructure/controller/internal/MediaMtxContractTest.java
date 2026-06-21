@@ -194,7 +194,9 @@ class MediaMtxContractTest {
                         .content("""
                                 {"path":"aperture/%s"}""".formatted(recId)))
                 .andExpect(status().isNoContent());
-        assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.ENDED);
+        // publish-end -> INTERRUPTED (not ENDED): connection lost, not device-stopped.
+        // A reconnect (publish-start) would resume to RECORDING.
+        assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.INTERRUPTED);
     }
 
     @Test

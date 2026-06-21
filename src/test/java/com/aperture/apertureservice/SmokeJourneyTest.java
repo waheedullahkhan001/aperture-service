@@ -136,11 +136,15 @@ class SmokeJourneyTest {
                                 .formatted(recId, segment)))
                 .andExpect(status().isNoContent());
 
-        // 10. stop: publish-end hook
+        // 10. network disconnect: publish-end hook -> INTERRUPTED (phone dropped connection, not stopped)
         mvc.perform(post("/internal/streams/hooks/publish-end").header("Authorization", SECRET)
                         .contentType("application/json")
                         .content("""
                                 {"path":"aperture/%s"}""".formatted(recId)))
+                .andExpect(status().isNoContent());
+        // device explicitly ends the emergency (user pressed stop) -> ENDED
+        mvc.perform(post("/api/v1/device/recordings/" + recId + "/end")
+                        .header("Authorization", "Bearer " + deviceToken))
                 .andExpect(status().isNoContent());
 
         // 11. web: list, detail, download
