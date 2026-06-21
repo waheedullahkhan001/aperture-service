@@ -1,5 +1,6 @@
 package com.aperture.apertureservice.infrastructure.controller.publicapi;
 
+import com.aperture.apertureservice.domain.recording.MetadataSample;
 import com.aperture.apertureservice.domain.recording.SegmentDownload;
 import com.aperture.apertureservice.domain.recording.WatchSegment;
 import com.aperture.apertureservice.domain.recording.WatchView;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -47,17 +49,31 @@ public class WatchController {
         }
     }
 
+    /**
+     * Public-safe telemetry sample: exposes only the fields a guest viewer needs.
+     * Deliberately excludes id, recordingId, and serverReceivedAt (internal fields).
+     */
+    public record WatchSampleDto(BigDecimal latitude, BigDecimal longitude, Instant clientTimestamp,
+                                 String deviceInfo, Double horizontalAccuracyM, Double speedMps,
+                                 Double bearingDeg, Double altitudeM, Integer batteryPercent) {
+        static WatchSampleDto from(MetadataSample s) {
+            return new WatchSampleDto(s.latitude(), s.longitude(), s.clientTimestamp(), s.deviceInfo(),
+                    s.horizontalAccuracyM(), s.speedMps(), s.bearingDeg(), s.altitudeM(), s.batteryPercent());
+        }
+    }
+
     public record WatchResponse(String ownerName, Instant startedAt, String status,
                                 RecordingDtos.SampleResponse latestSample, String hlsUrl, String webrtcUrl,
-                                List<WatchSegmentDto> segments) {}
+                                List<WatchSegmentDto> segments, List<WatchSampleDto> samples) {}
 
     @GetMapping("/{id}")
     public WatchResponse watch(@PathVariable UUID id, @RequestParam("t") String token) {
         WatchView v = getWatchView.watch(id, token);
         List<WatchSegmentDto> segmentDtos = v.segments().stream().map(WatchSegmentDto::from).toList();
+        List<WatchSampleDto> sampleDtos = v.samples().stream().map(WatchSampleDto::from).toList();
         return new WatchResponse(v.ownerName(), v.startedAt(), v.status().name(),
                 v.latestSample().map(RecordingDtos.SampleResponse::from).orElse(null),
-                v.hlsUrl(), v.webrtcUrl(), segmentDtos);
+                v.hlsUrl(), v.webrtcUrl(), segmentDtos, sampleDtos);
     }
 
     /**
