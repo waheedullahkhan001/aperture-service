@@ -6,8 +6,11 @@ import com.aperture.apertureservice.domain.account.MintedDevice;
 import com.aperture.apertureservice.domain.account.User;
 import com.aperture.apertureservice.domain.account.api.ConnectDevice;
 import com.aperture.apertureservice.domain.account.api.LogIn;
+import com.aperture.apertureservice.domain.account.api.LogOut;
 import com.aperture.apertureservice.domain.account.api.RevokeDevice;
+import com.aperture.apertureservice.domain.account.api.RevokeSession;
 import com.aperture.apertureservice.domain.account.spi.PasswordHasher;
+import com.aperture.apertureservice.domain.account.spi.Sessions;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.support.IntegrationTest;
 import com.github.f4b6a3.uuid.UuidCreator;
@@ -35,6 +38,9 @@ class SecurityMatrixTest {
     @Autowired Users users;
     @Autowired PasswordHasher hasher;
     @Autowired LogIn logIn;
+    @Autowired LogOut logOut;
+    @Autowired Sessions sessions;
+    @Autowired RevokeSession revokeSession;
     @Autowired ConnectDevice connectDevice;
     @Autowired RevokeDevice revokeDevice;
 
@@ -100,6 +106,53 @@ class SecurityMatrixTest {
         mvc.perform(get("/actuator/metrics")).andExpect(status().isUnauthorized()); // needs shared secret
         mvc.perform(get("/actuator/metrics").header("Authorization", "Bearer dev-webhook-secret-change-me"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void revokedSessionAccessTokenIsRejectedImmediately() throws Exception {
+        String accessToken = logIn.logIn(email, "abcdef1!", "machine-A").accessToken();
+
+        // Token works before revocation
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+
+        // Revoke the session (simulates "log out other device" on machine B)
+        UUID sessionId = sessions.byUser(userId).get(0).id();
+        revokeSession.revoke(userId, sessionId);
+
+        // Same access token must now be rejected — even though the JWT signature is still valid
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void liveSessionAccessTokenContinuesToWork() throws Exception {
+        String accessToken = logIn.logIn(email, "abcdef1!", "live-session").accessToken();
+
+        // Must work on every request while the session is alive
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void logoutInvalidatesAccessTokenImmediately() throws Exception {
+        String accessToken = logIn.logIn(email, "abcdef1!", "logout-device").accessToken();
+
+        // Works before logout
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+
+        // Self-logout deletes the session
+        UUID sessionId = sessions.byUser(userId).get(0).id();
+        logOut.logOut(sessionId);
+
+        // Access token must be rejected on the very next request
+        mvc.perform(get("/api/v1/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
     }
 
     @Test

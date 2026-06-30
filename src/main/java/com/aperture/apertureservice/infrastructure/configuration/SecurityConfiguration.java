@@ -1,6 +1,7 @@
 package com.aperture.apertureservice.infrastructure.configuration;
 
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
+import com.aperture.apertureservice.domain.account.spi.Sessions;
 import com.aperture.apertureservice.domain.account.spi.TokenIssuer;
 import com.aperture.apertureservice.infrastructure.security.DeviceTokenAuthenticationFilter;
 import com.aperture.apertureservice.infrastructure.security.JwtAuthenticationFilter;
@@ -34,8 +35,8 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    JwtAuthenticationFilter jwtAuthenticationFilter(TokenIssuer tokenIssuer) {
-        return new JwtAuthenticationFilter(tokenIssuer);
+    JwtAuthenticationFilter jwtAuthenticationFilter(TokenIssuer tokenIssuer, Sessions sessions) {
+        return new JwtAuthenticationFilter(tokenIssuer, sessions);
     }
 
     @Bean

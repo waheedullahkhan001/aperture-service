@@ -1,5 +1,6 @@
 package com.aperture.apertureservice.infrastructure.security;
 
+import com.aperture.apertureservice.domain.account.spi.Sessions;
 import com.aperture.apertureservice.domain.account.spi.TokenIssuer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,9 +17,11 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final TokenIssuer tokenIssuer;
+    private final Sessions sessions;
 
-    public JwtAuthenticationFilter(TokenIssuer tokenIssuer) {
+    public JwtAuthenticationFilter(TokenIssuer tokenIssuer, Sessions sessions) {
         this.tokenIssuer = tokenIssuer;
+        this.sessions = sessions;
     }
 
     @Override
@@ -27,6 +30,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith("Bearer ") && !header.startsWith("Bearer apd_")) {
             tokenIssuer.validate(header.substring(7)).ifPresentOrElse(claims -> {
+                if (sessions.byId(claims.sessionId()).isEmpty()) {
+                    request.setAttribute("auth.code", "INVALID_TOKEN");
+                    return;
+                }
                 var auth = new UsernamePasswordAuthenticationToken(
                         new AuthenticatedUser(claims.userId(), claims.sessionId()), null,
                         List.of(new SimpleGrantedAuthority("ROLE_USER")));
