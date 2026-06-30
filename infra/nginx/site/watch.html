@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#2563eb">
+  <title>Live stream — Aperture</title>
+  <!-- Absolute asset paths are required: nginx serves this file at /watch/<uuid> -->
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/vendor/hls.min.js" defer></script>
+</head>
+<body class="min-h-screen bg-base-200 flex items-start justify-center p-4">
+  <div class="card bg-base-100 shadow-xl w-full max-w-3xl mt-6">
+    <div class="card-body">
+      <div class="flex items-center gap-3 flex-wrap">
+        <h1 class="card-title text-2xl">Aperture emergency stream</h1>
+        <span id="status" class="badge badge-ghost">loading…</span>
+      </div>
+      <p id="owner" class="text-sm opacity-70"></p>
+      <p id="device" class="text-sm opacity-70 hidden"></p>
+
+      <div id="player-wrap">
+        <video id="player" class="w-full rounded bg-black aspect-video" controls autoplay muted playsinline
+               aria-label="Emergency stream"></video>
+        <p id="player-note" class="text-xs opacity-70 mt-1">If video does not start, the stream may not have begun yet — this page retries automatically.</p>
+        <p id="playhead" class="text-xs opacity-70 mt-1 hidden"></p>
+      </div>
+
+      <div id="message" class="mt-2"></div>
+
+      <button id="resume-live" type="button" class="btn btn-sm btn-error gap-1 mt-2 hidden" data-icon="radio">Resume live</button>
+
+      <div id="clips-wrap" class="mt-4 hidden">
+        <div class="flex items-baseline justify-between gap-2">
+          <h2 class="text-sm font-semibold opacity-70 flex items-center gap-1" data-icon="film" data-icon-size="size-4">Clips</h2>
+          <span class="text-xs opacity-60">Oldest first · tap to watch</span>
+        </div>
+        <ul id="clips" class="flex flex-col gap-1 mt-2"></ul>
+      </div>
+
+      <div class="mt-4">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h2 class="text-sm font-semibold opacity-70 flex items-center gap-1" data-icon="map-pin" data-icon-size="size-4">Location &amp; telemetry</h2>
+          <span id="meta-context" class="badge badge-sm badge-ghost"></span>
+        </div>
+        <p id="meta-note" class="text-xs opacity-60 mt-1 hidden"></p>
+        <div id="meta" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-sm mt-2"></div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/js/watch.js"></script>
+</body>
+</html>

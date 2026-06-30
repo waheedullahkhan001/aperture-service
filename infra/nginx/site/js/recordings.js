@@ -1,0 +1,68 @@
+import { api, requireAuth } from './api.js';
+import { esc, fmtDateTime, toast, confirmDialog, showApiError, STATUS_BADGE, STATUS_ICON } from './ui.js';
+import { icon } from './icons.js';
+import './nav.js';
+
+requireAuth();
+
+const rows = document.querySelector('#rows');
+const pageInfo = document.querySelector('#page-info');
+const filter = document.querySelector('#status-filter');
+let page = 0;
+let totalPages = 1;
+
+async function load() {
+  const params = new URLSearchParams({ page, size: 20 });
+  if (filter.value) params.set('status', filter.value);
+  try {
+    const data = await api.get(`/api/v1/recordings?${params}`);
+    totalPages = Math.max(data.totalPages, 1);
+    // After deleting the last row of the last page we can be past the end — rewind.
+    if (page >= totalPages && page > 0) {
+      page = totalPages - 1;
+      return load();
+    }
+    pageInfo.textContent = `Page ${data.page + 1} of ${totalPages} (${data.totalElements} total)`;
+    if (!data.content.length) {
+      rows.innerHTML = `<tr><td colspan="5" class="p-10">
+        <div class="flex flex-col items-center gap-2 opacity-60">${icon('video', 'size-10')}
+          <span>No recordings yet. Recordings appear here when your device streams to the server.</span>
+        </div></td></tr>`;
+      return;
+    }
+    rows.innerHTML = data.content.map((r) => `
+      <tr>
+        <td>${fmtDateTime(r.startedAt)}</td>
+        <td>${fmtDateTime(r.endedAt)}</td>
+        <td><span class="badge gap-1 ${STATUS_BADGE[r.status] ?? ''}">${icon(STATUS_ICON[r.status] ?? 'info', 'size-3')}${esc(r.status)}</span></td>
+        <td>${r.alertsDispatchedAt ? fmtDateTime(r.alertsDispatchedAt) : '—'}</td>
+        <td class="text-right whitespace-nowrap">
+          <a class="btn btn-sm gap-1" href="recording.html?id=${r.id}">${icon('play')}View</a>
+          <button class="btn btn-sm btn-error btn-outline gap-1" data-delete="${r.id}">${icon('trash-2')}Delete</button>
+        </td>
+      </tr>`).join('');
+  } catch (err) {
+    rows.innerHTML = '<tr><td colspan="5" class="text-center p-6 text-error">Failed to load recordings.</td></tr>';
+    showApiError(err);
+  }
+}
+
+rows.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-delete]');
+  if (!btn) return;
+  const id = btn.dataset.delete;
+  if (!await confirmDialog('Delete this recording and all its video files from the server? This cannot be undone.', 'Delete')) return;
+  try {
+    await api.del(`/api/v1/recordings/${id}`);
+    toast('Recording deleted', 'success');
+    load();
+  } catch (err) {
+    showApiError(err);
+  }
+});
+
+filter.addEventListener('change', () => { page = 0; load(); });
+document.querySelector('#prev').addEventListener('click', () => { if (page > 0) { page--; load(); } });
+document.querySelector('#next').addEventListener('click', () => { if (page < totalPages - 1) { page++; load(); } });
+
+load();
