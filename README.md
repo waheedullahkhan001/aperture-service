@@ -66,7 +66,9 @@ Prod environment variables: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`
 1. No rate limiting beyond verification-code cooldown/lockout.
 3. Device tokens do not expire by design (reliability first); compensated by hashed
    storage, TLS-only transport, and one-click revocation.
-4. Web access tokens are irrevocable within their ~15-minute lifetime.
+4. Web sessions are immediately revocable: the JWT filter validates the access token's
+   session id against the live session store on every request, so revoking or logging out
+   a session takes effect on the very next request (no ~15-minute window).
 5. Recordings are not resumable; each publish session is a new recording.
 6. Watch URLs do not expire until the recording is deleted.
 7. Retro-upload of clips recorded while offline is reserved in the schema
