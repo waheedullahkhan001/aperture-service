@@ -88,20 +88,21 @@ echo "hlsUrl: $HLS_URL"
 say "live HLS playback (cookie session)"
 # mediamtx returns 500 while the HLS muxer initialises (no segment buffered yet);
 # retry for up to ~20s before declaring failure.
+# -k: HLS_URL may go through nginx with a self-signed cert (NGINX_USE_LOCAL_CA=1).
 HLS_CODE="000"
 for i in $(seq 1 10); do
   JAR=$(mktemp)
-  HLS_CODE=$(curl -sL -c "$JAR" -b "$JAR" -o /dev/null -w "%{http_code}" "$HLS_URL")
+  HLS_CODE=$(curl -skL -c "$JAR" -b "$JAR" -o /dev/null -w "%{http_code}" "$HLS_URL")
   [ "$HLS_CODE" = "200" ] && break
   rm -f "$JAR"
   sleep 2
 done
 [ "$HLS_CODE" = "200" ] || fail "HLS index returned $HLS_CODE after retries"
-VARIANT=$(curl -sL -c "$JAR" -b "$JAR" "$HLS_URL" | grep -oE '^[a-z0-9_]+_stream\.m3u8[^ ]*' | head -1)
+VARIANT=$(curl -skL -c "$JAR" -b "$JAR" "$HLS_URL" | grep -oE '^[a-z0-9_]+_stream\.m3u8[^ ]*' | head -1)
 [ -n "$VARIANT" ] || fail "no variant playlist in HLS index"
 # child URL must share the index URL's host or the cookie won't be sent
 HLS_DIR="${HLS_URL%/index.m3u8*}"
-VCODE=$(curl -s -b "$JAR" -o /dev/null -w "%{http_code}" "$HLS_DIR/$VARIANT")
+VCODE=$(curl -sk -b "$JAR" -o /dev/null -w "%{http_code}" "$HLS_DIR/$VARIANT")
 [ "$VCODE" = "200" ] || fail "variant playlist returned $VCODE (cookie session broken?)"
 rm -f "$JAR"
 
