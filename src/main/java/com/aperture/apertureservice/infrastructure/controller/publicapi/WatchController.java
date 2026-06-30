@@ -59,7 +59,8 @@ public class WatchController {
 
     public record WatchResponse(String ownerName, Instant startedAt, String status,
                                 RecordingDtos.SampleResponse latestSample, String hlsUrl, String webrtcUrl,
-                                List<WatchSegmentDto> segments, List<WatchSampleDto> samples) {}
+                                List<WatchSegmentDto> segments, List<WatchSampleDto> samples,
+                                String deviceName) {}
 
     @GetMapping("/{id}")
     public WatchResponse watch(@PathVariable UUID id, @RequestParam("t") String token) {
@@ -68,7 +69,7 @@ public class WatchController {
         List<WatchSampleDto> sampleDtos = v.samples().stream().map(WatchSampleDto::from).toList();
         return new WatchResponse(v.ownerName(), v.startedAt(), v.status().name(),
                 v.latestSample().map(RecordingDtos.SampleResponse::from).orElse(null),
-                v.hlsUrl(), v.webrtcUrl(), segmentDtos, sampleDtos);
+                v.hlsUrl(), v.webrtcUrl(), segmentDtos, sampleDtos, v.deviceName());
     }
 
     @GetMapping("/{id}/segments/{n}")

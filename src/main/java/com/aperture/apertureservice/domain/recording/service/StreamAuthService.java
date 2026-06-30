@@ -6,6 +6,7 @@ import com.aperture.apertureservice.ddd.NotFound;
 import com.aperture.apertureservice.domain.account.DeviceIdentity;
 import com.aperture.apertureservice.domain.account.User;
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
+import com.aperture.apertureservice.domain.account.spi.Devices;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.domain.recording.Recording;
 import com.aperture.apertureservice.domain.recording.RecordingSegment;
@@ -35,6 +36,7 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
     private final IdentifyDevice identifyDevice;
     private final Recordings recordings;
     private final Users users;
+    private final Devices devices;
     private final MetadataSamples samples;
     private final RecordingSegments segments;
     private final SegmentFileStore files;
@@ -42,11 +44,12 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
     private final String webrtcBase;
 
     public StreamAuthService(IdentifyDevice identifyDevice, Recordings recordings, Users users,
-                             MetadataSamples samples, RecordingSegments segments, SegmentFileStore files,
-                             String hlsBase, String webrtcBase) {
+                             Devices devices, MetadataSamples samples, RecordingSegments segments,
+                             SegmentFileStore files, String hlsBase, String webrtcBase) {
         this.identifyDevice = identifyDevice;
         this.recordings = recordings;
         this.users = users;
+        this.devices = devices;
         this.samples = samples;
         this.segments = segments;
         this.files = files;
@@ -74,6 +77,9 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
     public WatchView watch(UUID recordingId, String viewSecret) {
         Recording r = verifiedRow(recordingId, viewSecret);
         String ownerName = users.byId(r.userId()).map(User::fullname).orElse("Unknown");
+        String deviceName = r.deviceId() != null
+                ? devices.byId(r.deviceId()).map(com.aperture.apertureservice.domain.account.Device::name).orElse(null)
+                : null;
         List<WatchSegment> watchSegments = segments.byRecording(recordingId).stream()
                 .sorted(Comparator.comparingInt(RecordingSegment::segmentNumber))
                 .map(s -> new WatchSegment(s.segmentNumber(), s.startTime(), s.endTime(),
@@ -87,7 +93,7 @@ public class StreamAuthService implements AuthorizePublish, AuthorizeView, GetWa
         return new WatchView(ownerName, r.startedAt(), r.status(), samples.latest(recordingId),
                 hlsBase + "/aperture/" + recordingId + "/index.m3u8?t=" + r.viewSecret(),
                 webrtcBase + "/aperture/" + recordingId + "/whep?t=" + r.viewSecret(),
-                watchSegments, chronological);
+                watchSegments, chronological, deviceName);
     }
 
     @Override

@@ -6,4 +6,4 @@ import java.util.Optional;
 
 public record WatchView(String ownerName, Instant startedAt, RecordingStatus status,
                         Optional<MetadataSample> latestSample, String hlsUrl, String webrtcUrl,
-                        List<WatchSegment> segments, List<MetadataSample> samples) {}
+                        List<WatchSegment> segments, List<MetadataSample> samples, String deviceName) {}

@@ -1,6 +1,7 @@
 package com.aperture.apertureservice.infrastructure.configuration;
 
 import com.aperture.apertureservice.domain.account.api.IdentifyDevice;
+import com.aperture.apertureservice.domain.account.spi.Devices;
 import com.aperture.apertureservice.domain.account.spi.Users;
 import com.aperture.apertureservice.domain.recording.api.EnsureRecording;
 import com.aperture.apertureservice.domain.recording.service.UploadClipService;
@@ -36,10 +37,10 @@ public class RecordingConfiguration {
 
     @Bean
     StreamAuthService streamAuthService(IdentifyDevice identifyDevice, Recordings recordings,
-                                        Users users, MetadataSamples samples,
+                                        Users users, Devices devices, MetadataSamples samples,
                                         RecordingSegments segments, SegmentFileStore files,
                                         AppProperties props) {
-        return new StreamAuthService(identifyDevice, recordings, users, samples, segments, files,
+        return new StreamAuthService(identifyDevice, recordings, users, devices, samples, segments, files,
                 props.streaming().hlsBase(), props.streaming().webrtcBase());
     }
 
