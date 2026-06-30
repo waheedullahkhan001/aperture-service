@@ -45,7 +45,7 @@ class LibraryServiceTest {
     private UUID seedRecording() {
         UUID id = UuidCreator.getTimeOrderedEpoch();
         new RecordingService(recordings, new FixedAlertPolicy(null), new FixedRandomTokens(), clock)
-                .ensure(id, userId, null);
+                .ensure(id, userId, null, null);
         return id;
     }
 

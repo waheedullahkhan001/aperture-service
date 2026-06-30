@@ -46,9 +46,9 @@ class SchedulersTest {
     @Test
     void dispatchTickProcessesEveryDueRecordingEvenWhenOneFails() {
         Recording a = new Recording(UUID.randomUUID(), UUID.randomUUID(), RecordingStatus.RECORDING,
-                Instant.EPOCH, null, "apv_a", Instant.EPOCH, null, false);
+                Instant.EPOCH, null, "apv_a", Instant.EPOCH, null, false, null);
         Recording b = new Recording(UUID.randomUUID(), UUID.randomUUID(), RecordingStatus.RECORDING,
-                Instant.EPOCH, null, "apv_b", Instant.EPOCH, null, false);
+                Instant.EPOCH, null, "apv_b", Instant.EPOCH, null, false, null);
         when(recordings.dispatchDue(clock.instant())).thenReturn(List.of(a, b));
         doThrow(new RuntimeException("boom")).when(dispatchAlerts).dispatch(a.id());
 

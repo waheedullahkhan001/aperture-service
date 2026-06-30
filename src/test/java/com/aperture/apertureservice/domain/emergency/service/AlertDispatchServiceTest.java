@@ -52,7 +52,7 @@ class AlertDispatchServiceTest {
         users.save(u);
         userId = u.id();
         Recording r = new Recording(UuidCreator.getTimeOrderedEpoch(), userId, RecordingStatus.RECORDING,
-                T0, null, "apv_secret", T0.minusSeconds(1), null, false);
+                T0, null, "apv_secret", T0.minusSeconds(1), null, false, null);
         recordings.save(r);
         recId = r.id();
         viewSecret = r.viewSecret();
@@ -95,7 +95,7 @@ class AlertDispatchServiceTest {
 
         // ended recording: seed a fresh recording, add a contact, end it, then dispatch → no emails, dispatchedAt stays null
         Recording fresh = new Recording(UuidCreator.getTimeOrderedEpoch(), userId, RecordingStatus.RECORDING,
-                T0, null, "apv_other", T0.minusSeconds(1), null, false);
+                T0, null, "apv_other", T0.minusSeconds(1), null, false, null);
         recordings.save(fresh);
         contacts.save(new EmergencyContact(null, userId, "Mom", new Email("mom@example.com"), null));
         recordings.save(fresh.ended(T0));

@@ -46,7 +46,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void publishEndTransitionsLiveRecordingToInterrupted() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.RECORDING);
 
@@ -60,7 +60,7 @@ class OutageTolerantRecordingTest {
     @Test
     void publishEndOnPendingRecordingAlsoTransitionsToInterrupted() {
         // Edge case: phone disconnects before publish-start arrives
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
 
         service.endAsSystem(recId);
 
@@ -71,7 +71,7 @@ class OutageTolerantRecordingTest {
     @Test
     void reconnectResumesFromInterruptedToRecording() {
         // The exact bug: publish-start -> publish-end -> publish-start must result in RECORDING
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);  // RECORDING
         service.endAsSystem(recId);             // INTERRUPTED
 
@@ -86,7 +86,7 @@ class OutageTolerantRecordingTest {
     @Test
     void reconnectAfterLongGapStillResumes() {
         // No time window: INTERRUPTED -> RECORDING regardless of elapsed time
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         service.endAsSystem(recId);
 
@@ -100,7 +100,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void multipleDisconnectReconnectCyclesAllWork() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
 
         for (int i = 0; i < 3; i++) {
             service.markStreaming(recId, userId);
@@ -118,7 +118,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void deviceEndFromRecordingTransitionsToEndedWithEndedAt() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
 
         service.end(recId, userId);
@@ -130,7 +130,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void deviceEndFromInterruptedTransitionsToEndedWithEndedAt() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         service.endAsSystem(recId); // INTERRUPTED
 
@@ -143,7 +143,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void deviceEndFromPendingTransitionsToEnded() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
 
         service.end(recId, userId);
 
@@ -154,7 +154,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void reconnectDoesNotResumeEndedRecording() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         service.end(recId, userId); // explicit device end -> ENDED
 
@@ -166,7 +166,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void deviceEndIsIdempotentOnEndedRecording() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.end(recId, userId);
 
         service.end(recId, userId); // no-op, no exception
@@ -176,7 +176,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void deviceEndChecksOwnership() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         assertThatThrownBy(() -> service.end(recId, UUID.randomUUID())).isInstanceOf(Forbidden.class);
     }
 
@@ -187,7 +187,7 @@ class OutageTolerantRecordingTest {
         // Create an INTERRUPTED recording in the past (past the stale threshold)
         RecordingService past = new RecordingService(recordings, alertPolicy, tokens,
                 Clock.fixed(T0.minus(Duration.ofMinutes(10)), ZoneOffset.UTC));
-        past.ensure(recId, userId, null);
+        past.ensure(recId, userId, null, null);
         past.markStreaming(recId, userId);
         // Manually put it into INTERRUPTED state (endAsSystem on the past service)
         recordings.save(recordings.byId(recId).orElseThrow().interrupted());
@@ -204,8 +204,8 @@ class OutageTolerantRecordingTest {
         UUID streamingId = UuidCreator.getTimeOrderedEpoch();
         RecordingService past = new RecordingService(recordings, alertPolicy, tokens,
                 Clock.fixed(T0.minus(Duration.ofMinutes(10)), ZoneOffset.UTC));
-        past.ensure(pendingId, userId, null);
-        past.ensure(streamingId, userId, null);
+        past.ensure(pendingId, userId, null, null);
+        past.ensure(streamingId, userId, null, null);
         past.markStreaming(streamingId, userId);
 
         int swept = service.sweep();
@@ -218,7 +218,7 @@ class OutageTolerantRecordingTest {
 
     @Test
     void interruptedRecordingIsLiveForAlertDispatch() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         service.endAsSystem(recId); // INTERRUPTED
 
@@ -234,7 +234,7 @@ class OutageTolerantRecordingTest {
         // InMemoryRecordings doesn't enforce segment-recording status coupling,
         // so this test verifies that the status field itself doesn't block the path.
         // The real gate is RecordingSegmentService/UploadClip which checks ownership, not status.
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         service.endAsSystem(recId); // INTERRUPTED
 

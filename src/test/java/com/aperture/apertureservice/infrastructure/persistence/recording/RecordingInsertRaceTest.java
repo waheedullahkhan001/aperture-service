@@ -47,7 +47,7 @@ class RecordingInsertRaceTest {
         Callable<Boolean> attempt = () -> {
             start.await();
             Recording candidate = new Recording(recId, u.id(), RecordingStatus.PENDING, Instant.now(), null,
-                    "apv_race_" + UUID.randomUUID(), null, null, false);  // distinct secret per thread, same id
+                    "apv_race_" + UUID.randomUUID(), null, null, false, null);  // distinct secret per thread, same id
             return recordings.insertIfAbsent(candidate);
         };
         try {

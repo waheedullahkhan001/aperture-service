@@ -44,7 +44,7 @@ class TelemetryServiceTest {
     @BeforeEach
     void seed() {
         new RecordingService(recordings, new FixedAlertPolicy(null), new FixedRandomTokens(),
-                clock).ensure(recId, userId, null);
+                clock).ensure(recId, userId, null, null);
     }
 
     @Test

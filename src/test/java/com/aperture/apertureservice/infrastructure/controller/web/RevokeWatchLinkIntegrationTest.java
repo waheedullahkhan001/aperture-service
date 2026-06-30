@@ -124,7 +124,7 @@ class RevokeWatchLinkIntegrationTest {
         UUID otherUserId = UUID.randomUUID();
         UUID recId = UuidCreator.getTimeOrderedEpoch();
         Recording foreign = new Recording(recId, otherUserId, RecordingStatus.PENDING,
-                Instant.now(), null, "apv_foreign_" + UUID.randomUUID(), null, null, false);
+                Instant.now(), null, "apv_foreign_" + UUID.randomUUID(), null, null, false, null);
         recordings.insertIfAbsent(foreign);
 
         mvc.perform(post("/api/v1/recordings/{id}/revoke-link", recId)

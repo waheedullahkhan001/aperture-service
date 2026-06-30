@@ -48,8 +48,8 @@ class StreamAuthServiceTest {
     private final DeviceService deviceService = new DeviceService(users, devices, tokens, clock);
     private final RecordingService recordingService =
             new RecordingService(recordings, new FixedAlertPolicy(null), tokens, clock);
-    private final StreamAuthService service = new StreamAuthService(deviceService, recordings, users, samples,
-            segments, files, "http://localhost:8888", "http://localhost:8889");
+    private final StreamAuthService service = new StreamAuthService(deviceService, recordings, users, devices,
+            samples, segments, files, "http://localhost:8888", "http://localhost:8889");
 
     private UUID userId;
     private String deviceToken;
@@ -67,13 +67,13 @@ class StreamAuthServiceTest {
     @Test
     void publishAllowedForOwnTokenOnNewOrOwnRecording() {
         service.authorizePublish(deviceToken, recId);            // new id: allowed
-        recordingService.ensure(recId, userId, null);
+        recordingService.ensure(recId, userId, null, null);
         service.authorizePublish(deviceToken, recId);            // own existing id: allowed
     }
 
     @Test
     void publishDeniedForForeignRecordingOrBadToken() {
-        recordingService.ensure(recId, UUID.randomUUID(), null); // someone else's recording
+        recordingService.ensure(recId, UUID.randomUUID(), null, null); // someone else's recording
         assertThatThrownBy(() -> service.authorizePublish(deviceToken, recId))
                 .isInstanceOf(Forbidden.class);
         assertThatThrownBy(() -> service.authorizePublish("apd_bad", UuidCreator.getTimeOrderedEpoch()))
@@ -82,7 +82,7 @@ class StreamAuthServiceTest {
 
     @Test
     void viewRequiresExactSecret() {
-        Recording r = recordingService.ensure(recId, userId, null).recording();
+        Recording r = recordingService.ensure(recId, userId, null, null).recording();
         service.authorizeView(recId, r.viewSecret());
         assertThatThrownBy(() -> service.authorizeView(recId, "apv_wrong"))
                 .isInstanceOf(Forbidden.class).hasFieldOrPropertyWithValue("code", "INVALID_VIEW_TOKEN");
@@ -92,7 +92,7 @@ class StreamAuthServiceTest {
 
     @Test
     void watchViewAssemblesOwnerUrlsAndLatestSample() {
-        Recording r = recordingService.ensure(recId, userId, null).recording();
+        Recording r = recordingService.ensure(recId, userId, null, null).recording();
         samples.saveAll(List.of(new MetadataSample(null, recId, new BigDecimal("33.684400"),
                 new BigDecimal("73.047900"), T0, T0, "Pixel", null, null, null, null, null)));
 
@@ -108,7 +108,7 @@ class StreamAuthServiceTest {
 
     @Test
     void watchViewSamplesAreChronologicalAndLatestSampleStillPresent() {
-        Recording r = recordingService.ensure(recId, userId, null).recording();
+        Recording r = recordingService.ensure(recId, userId, null, null).recording();
         Instant t1 = T0.minusSeconds(60);
         Instant t2 = T0;
         Instant t3 = T0.plusSeconds(30);
@@ -136,7 +136,7 @@ class StreamAuthServiceTest {
 
     @Test
     void watchViewSamplesEmptyWhenNoSamplesExist() {
-        Recording r = recordingService.ensure(recId, userId, null).recording();
+        Recording r = recordingService.ensure(recId, userId, null, null).recording();
 
         WatchView view = service.watch(recId, r.viewSecret());
 
@@ -145,8 +145,28 @@ class StreamAuthServiceTest {
     }
 
     @Test
+    void watchViewIncludesDeviceNameWhenRecordingHasDeviceId() {
+        // Arrange: register a recording created by the seeded device (there's exactly one device per seeded user)
+        UUID deviceId = devices.byUser(userId).get(0).id();
+        Recording r = recordingService.ensure(recId, userId, null, deviceId).recording();
+
+        WatchView view = service.watch(recId, r.viewSecret());
+
+        assertThat(view.deviceName()).isEqualTo("Pixel");
+    }
+
+    @Test
+    void watchViewDeviceNameIsNullWhenRecordingHasNoDeviceId() {
+        Recording r = recordingService.ensure(recId, userId, null, null).recording();
+
+        WatchView view = service.watch(recId, r.viewSecret());
+
+        assertThat(view.deviceName()).isNull();
+    }
+
+    @Test
     void watchViewReturnsMoreThan20SamplesWhenRecordingHas25() {
-        Recording r = recordingService.ensure(recId, userId, null).recording();
+        Recording r = recordingService.ensure(recId, userId, null, null).recording();
         // Insert 25 samples spaced 8 seconds apart (typical phone cadence)
         List<MetadataSample> toSave = new java.util.ArrayList<>();
         for (int i = 0; i < 25; i++) {

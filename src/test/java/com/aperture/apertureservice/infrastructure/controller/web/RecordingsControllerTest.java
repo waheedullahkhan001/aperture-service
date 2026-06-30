@@ -85,7 +85,7 @@ class RecordingsControllerTest {
     }
 
     private Recording recording() {
-        return new Recording(recId, userId, RecordingStatus.ENDED, t, t.plusSeconds(60), "apv_s", null, null, false);
+        return new Recording(recId, userId, RecordingStatus.ENDED, t, t.plusSeconds(60), "apv_s", null, null, false, null);
     }
 
     @Test
@@ -124,7 +124,7 @@ class RecordingsControllerTest {
     @Test
     void watchWithoutSampleReturnsNullLatestSample() throws Exception {
         when(getWatchView.watch(recId, "apv_s")).thenReturn(new WatchView("Owner", t,
-                RecordingStatus.PENDING, Optional.empty(), "http://hls", "http://whep", List.of(), List.of()));
+                RecordingStatus.PENDING, Optional.empty(), "http://hls", "http://whep", List.of(), List.of(), null));
         mvc.perform(get("/api/public/watch/" + recId + "?t=apv_s"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.latestSample").value(nullValue()));
@@ -143,7 +143,7 @@ class RecordingsControllerTest {
                 RecordingStatus.RECORDING,
                 Optional.of(new MetadataSample(1L, recId, new BigDecimal("1.5"), new BigDecimal("2.5"), t, t, "Pixel",
                         null, null, null, null, null)),
-                "http://hls", "http://whep", List.of(), List.of()));
+                "http://hls", "http://whep", List.of(), List.of(), null));
         mvc.perform(get("/api/public/watch/" + recId + "?t=apv_s"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ownerName").value("Owner"))

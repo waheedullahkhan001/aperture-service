@@ -36,7 +36,7 @@ class RecordingServiceTest {
 
     @Test
     void ensureCreatesPendingWithViewSecretAndCountdown() {
-        EnsureResult result = service.ensure(recId, userId, T0.minusSeconds(2));
+        EnsureResult result = service.ensure(recId, userId, T0.minusSeconds(2), null);
 
         assertThat(result.created()).isTrue();
         Recording r = result.recording();
@@ -50,35 +50,35 @@ class RecordingServiceTest {
     @Test
     void ensureWithoutContactsHasNoCountdown() {
         alertPolicy.set(null);
-        assertThat(service.ensure(recId, userId, null).recording().countdownEndsAt()).isNull();
+        assertThat(service.ensure(recId, userId, null, null).recording().countdownEndsAt()).isNull();
     }
 
     @Test
     void ensureZeroCountdownIsImmediatelyDue() {
         alertPolicy.set(Duration.ZERO);
-        Recording r = service.ensure(recId, userId, null).recording();
+        Recording r = service.ensure(recId, userId, null, null).recording();
         assertThat(r.countdownEndsAt()).isEqualTo(T0);
         assertThat(recordings.dispatchDue(T0)).containsExactly(r);
     }
 
     @Test
     void ensureIsIdempotent() {
-        Recording first = service.ensure(recId, userId, null).recording();
-        EnsureResult second = service.ensure(recId, userId, T0.plusSeconds(5));
+        Recording first = service.ensure(recId, userId, null, null).recording();
+        EnsureResult second = service.ensure(recId, userId, T0.plusSeconds(5), null);
         assertThat(second.created()).isFalse();
         assertThat(second.recording()).isEqualTo(first);
     }
 
     @Test
     void ensureRejectsForeignRecordingId() {
-        service.ensure(recId, userId, null);
-        assertThatThrownBy(() -> service.ensure(recId, UUID.randomUUID(), null))
+        service.ensure(recId, userId, null, null);
+        assertThatThrownBy(() -> service.ensure(recId, UUID.randomUUID(), null, null))
                 .isInstanceOf(Forbidden.class).hasFieldOrPropertyWithValue("code", "RECORDING_FORBIDDEN");
     }
 
     @Test
     void markStreamingUpgradesPendingOnlyAndChecksOwner() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.RECORDING);
 
@@ -92,7 +92,7 @@ class RecordingServiceTest {
     @Test
     void markStreamingDoesNotResurrectEndedRecording() {
         // ENDED (via device explicit end) is terminal — reconnect must not resume it.
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.end(recId, userId);  // device explicit end -> ENDED
         service.markStreaming(recId, userId);
         assertThat(recordings.byId(recId).orElseThrow().status()).isEqualTo(RecordingStatus.ENDED);
@@ -100,7 +100,7 @@ class RecordingServiceTest {
 
     @Test
     void endTransitionsLiveStatesAndIsIdempotent() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.markStreaming(recId, userId);
         service.end(recId, userId);
         Recording r = recordings.byId(recId).orElseThrow();
@@ -116,16 +116,16 @@ class RecordingServiceTest {
     @Test
     void ensureOnTerminalRowReturnsItWithoutResurrection() {
         // ENDED (via device explicit end) is the terminal state — ensure returns it as-is.
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         service.end(recId, userId);  // device explicit end -> ENDED
-        EnsureResult again = service.ensure(recId, userId, null);
+        EnsureResult again = service.ensure(recId, userId, null, null);
         assertThat(again.created()).isFalse();
         assertThat(again.recording().status()).isEqualTo(RecordingStatus.ENDED); // device sees terminal state
     }
 
     @Test
     void cancelAlertsDisarmsCountdownAndIsIdempotent() {
-        service.ensure(recId, userId, null);                       // FixedAlertPolicy arms 30s countdown
+        service.ensure(recId, userId, null, null);                       // FixedAlertPolicy arms 30s countdown
         assertThat(recordings.dispatchDue(T0.plusSeconds(31))).hasSize(1);
 
         CancelResult first = service.cancelAlerts(recId, userId);
@@ -140,7 +140,7 @@ class RecordingServiceTest {
 
     @Test
     void cancelAlertsAfterDispatchReportsIrreversible() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         recordings.save(recordings.byId(recId).orElseThrow().dispatched(T0));
         CancelResult result = service.cancelAlerts(recId, userId);
         assertThat(result.cancelled()).isFalse();
@@ -149,7 +149,7 @@ class RecordingServiceTest {
 
     @Test
     void cancelAlertsChecksOwnership() {
-        service.ensure(recId, userId, null);
+        service.ensure(recId, userId, null, null);
         assertThatThrownBy(() -> service.cancelAlerts(recId, UUID.randomUUID())).isInstanceOf(Forbidden.class);
         assertThatThrownBy(() -> service.cancelAlerts(UUID.randomUUID(), userId)).isInstanceOf(NotFound.class);
     }
@@ -161,8 +161,8 @@ class RecordingServiceTest {
         // ensure with a service whose clock is 10 minutes in the past
         RecordingService past = new RecordingService(recordings, alertPolicy, tokens,
                 Clock.fixed(T0.minus(Duration.ofMinutes(10)), ZoneOffset.UTC));
-        past.ensure(pendingId, userId, null);
-        past.ensure(streamingId, userId, null);
+        past.ensure(pendingId, userId, null, null);
+        past.ensure(streamingId, userId, null, null);
         past.markStreaming(streamingId, userId);
 
         int swept = service.sweep();

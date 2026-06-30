@@ -92,8 +92,8 @@ class DeviceApiControllerTest {
     void ensureReturns201OnCreateAnd200OnExisting() throws Exception {
         Instant t = Instant.parse("2026-06-07T12:00:00Z");
         Recording r = new Recording(recId, userId, RecordingStatus.PENDING, t, null, "apv_s",
-                t.plusSeconds(30), null, false);
-        when(ensureRecording.ensure(recId, userId, t)).thenReturn(new EnsureResult(r, true));
+                t.plusSeconds(30), null, false, null);
+        when(ensureRecording.ensure(recId, userId, t, deviceId)).thenReturn(new EnsureResult(r, true));
 
         mvc.perform(put("/api/v1/device/recordings/" + recId).principal(asDevice())
                         .contentType("application/json")
@@ -104,7 +104,7 @@ class DeviceApiControllerTest {
                 .andExpect(jsonPath("$.status").value("PENDING"))
                 .andExpect(jsonPath("$.watchUrl").value("http://localhost/watch/" + recId + "?t=apv_s"));
 
-        when(ensureRecording.ensure(recId, userId, t)).thenReturn(new EnsureResult(r, false));
+        when(ensureRecording.ensure(recId, userId, t, deviceId)).thenReturn(new EnsureResult(r, false));
         mvc.perform(put("/api/v1/device/recordings/" + recId).principal(asDevice())
                         .contentType("application/json")
                         .content("""
@@ -115,8 +115,8 @@ class DeviceApiControllerTest {
     @Test
     void ensureWithEmptyBodyWorks() throws Exception {
         Recording r = new Recording(recId, userId, RecordingStatus.PENDING, Instant.now(), null, "apv_s",
-                null, null, false);
-        when(ensureRecording.ensure(recId, userId, null)).thenReturn(new EnsureResult(r, true));
+                null, null, false, null);
+        when(ensureRecording.ensure(recId, userId, null, deviceId)).thenReturn(new EnsureResult(r, true));
         mvc.perform(put("/api/v1/device/recordings/" + recId).principal(asDevice()))
                 .andExpect(status().isCreated());
     }
