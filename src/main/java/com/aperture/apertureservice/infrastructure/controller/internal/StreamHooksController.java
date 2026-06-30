@@ -79,9 +79,9 @@ public class StreamHooksController {
                 .orElseThrow(() -> new BadRequest("PATH_INVALID", "Unknown stream path"));
         String token = StreamPaths.queryParam(body.query(), "token")
                 .orElseThrow(() -> new Unauthorized("INVALID_DEVICE_TOKEN", "Missing device token"));
-        UUID userId = identifyDevice.identify(token).userId();
-        ensureRecording.ensure(recordingId, userId, null);
-        markStreaming.markStreaming(recordingId, userId);
+        var identity = identifyDevice.identify(token);
+        ensureRecording.ensure(recordingId, identity.userId(), null, identity.deviceId());
+        markStreaming.markStreaming(recordingId, identity.userId());
     }
 
     @PostMapping("/hooks/publish-end")

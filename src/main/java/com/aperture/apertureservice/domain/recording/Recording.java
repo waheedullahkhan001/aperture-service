@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record Recording(UUID id, UUID userId, RecordingStatus status, Instant startedAt,
                         Instant endedAt, String viewSecret, Instant countdownEndsAt,
-                        Instant alertsDispatchedAt, boolean viewRevoked) {
+                        Instant alertsDispatchedAt, boolean viewRevoked, UUID deviceId) {
 
     /**
      * A recording is "live" if it has not been explicitly ended by the device.
@@ -29,36 +29,36 @@ public record Recording(UUID id, UUID userId, RecordingStatus status, Instant st
 
     public Recording streaming() {
         return new Recording(id, userId, RecordingStatus.RECORDING, startedAt, endedAt,
-                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
+                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked, deviceId);
     }
 
     /** Connection lost — not ended, just disconnected. Does NOT set ended_at. */
     public Recording interrupted() {
         return new Recording(id, userId, RecordingStatus.INTERRUPTED, startedAt, null,
-                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
+                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked, deviceId);
     }
 
     public Recording ended(Instant at) {
         return new Recording(id, userId, RecordingStatus.ENDED, startedAt, at,
-                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
+                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked, deviceId);
     }
 
     public Recording failed(Instant at) {
         return new Recording(id, userId, RecordingStatus.FAILED, startedAt, at,
-                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked);
+                viewSecret, countdownEndsAt, alertsDispatchedAt, viewRevoked, deviceId);
     }
 
     public Recording dispatched(Instant at) {
         return new Recording(id, userId, status, startedAt, endedAt,
-                viewSecret, countdownEndsAt, at, viewRevoked);
+                viewSecret, countdownEndsAt, at, viewRevoked, deviceId);
     }
 
     /** Disarms the alert countdown; recording continues, alerts will never fire. */
     public Recording disarmed() {
-        return new Recording(id, userId, status, startedAt, endedAt, viewSecret, null, alertsDispatchedAt, viewRevoked);
+        return new Recording(id, userId, status, startedAt, endedAt, viewSecret, null, alertsDispatchedAt, viewRevoked, deviceId);
     }
 
     public Recording revokedView() {
-        return new Recording(id, userId, status, startedAt, endedAt, viewSecret, countdownEndsAt, alertsDispatchedAt, true);
+        return new Recording(id, userId, status, startedAt, endedAt, viewSecret, countdownEndsAt, alertsDispatchedAt, true, deviceId);
     }
 }

@@ -76,7 +76,7 @@ public class DeviceApiController {
     public ResponseEntity<DeviceApiDtos.EnsureResponse> ensure(Authentication auth, @PathVariable UUID id,
             @RequestBody(required = false) DeviceApiDtos.EnsureRequest body) {
         EnsureResult result = ensureRecording.ensure(id, device(auth).userId(),
-                body == null ? null : body.startedAt());
+                body == null ? null : body.startedAt(), device(auth).deviceId());
         Recording r = result.recording();
         DeviceApiDtos.EnsureResponse response = new DeviceApiDtos.EnsureResponse(r.id(),
                 r.status().name(), r.countdownEndsAt(),

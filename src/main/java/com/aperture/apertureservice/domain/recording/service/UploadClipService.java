@@ -38,7 +38,7 @@ public class UploadClipService implements UploadClip {
                                    long sizeHint, Instant startTime, Instant endTime,
                                    String quality, String clipId) {
         // 1. Ensure recording exists and belongs to this user (creates if absent — pure-offline case)
-        ensureRecording.ensure(recordingId, userId, startTime);
+        ensureRecording.ensure(recordingId, userId, startTime, null);
 
         // 2. Idempotency: if a segment with this clientClipId already exists, return it.
         //    Keying on clientClipId (not segmentNumber) prevents a collision where a streamed

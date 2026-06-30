@@ -7,6 +7,6 @@ import java.util.UUID;
 
 public interface EnsureRecording {
     /** Idempotent: creates the recording if absent, returns the current row otherwise.
-     *  clientStartedAt may be null (hook path). */
-    EnsureResult ensure(UUID recordingId, UUID userId, Instant clientStartedAt);
+     *  clientStartedAt may be null (hook path). deviceId may be null (clip-upload path or unknown). */
+    EnsureResult ensure(UUID recordingId, UUID userId, Instant clientStartedAt, UUID deviceId);
 }

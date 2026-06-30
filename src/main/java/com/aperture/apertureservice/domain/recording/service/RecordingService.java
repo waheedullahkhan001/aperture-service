@@ -44,13 +44,13 @@ public class RecordingService implements EnsureRecording, MarkStreaming, EndReco
     // transaction inside the JPA adapter (REQUIRES_NEW) so a duplicate-key conflict cannot
     // poison an outer transaction. See the recording persistence adapter.
     @Override
-    public EnsureResult ensure(UUID recordingId, UUID userId, Instant clientStartedAt) {
+    public EnsureResult ensure(UUID recordingId, UUID userId, Instant clientStartedAt, UUID deviceId) {
         Instant now = clock.instant();
         Recording candidate = new Recording(recordingId, userId, RecordingStatus.PENDING,
                 clientStartedAt != null ? clientStartedAt : now, null,
                 tokens.token("apv_"),
                 alertPolicy.activeCountdownFor(userId).map(now::plus).orElse(null),
-                null, false);
+                null, false, deviceId);
         if (recordings.insertIfAbsent(candidate)) {
             return new EnsureResult(candidate, true);
         }
